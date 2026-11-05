@@ -1,0 +1,31 @@
+# Datos originales y scraping
+*.csv
+*.parquet
+*.jsonl
+*.log
+
+# Datos y directorios de trabajo
+data/
+output/
+staging/
+backups/
+.venv/
+venv/
+
+# Archivos temporales y copias
+*.backup_*
+*.bak
+*.tmp
+*~
+
+# Resultados de R
+.Rhistory
+.RData
+.Rproj.user/
+.Rcheck/
+*.Rcheck/
+*.tar.gz
+
+# Sistema
+.DS_Store
+__pycache__/
