@@ -1,0 +1,4 @@
+^tests/.*[.]backup_
+^.*[.]Rcheck$
+^.*[.]tar[.]gz$
+^DESCRIPTION[.]backup_cran$

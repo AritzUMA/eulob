@@ -1,0 +1,73 @@
+---
+title: "Getting Started with eulob"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting Started with eulob}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# Introduction
+
+The `eulob` package provides access to EU-LOB, a
+catalogue of lobbying organizations registered in
+national European registers and the EU Transparency Register.
+
+The bundled catalogue can be queried without an internet connection.
+
+# Load the package
+
+```{r}
+library(eulob)
+```
+
+# Explore the available registers
+
+```{r}
+eulob_countries()
+eulob_registers()
+```
+
+The code `UE` identifies the EU Transparency Register.
+It is not an ISO country code.
+
+# Explore the Spanish register
+
+```{r}
+eulob_registers(country = "ES")
+head(eulob_lobbies(country = "ES"))
+```
+
+# Search organization names
+
+Searches use literal, case-insensitive substring matching.
+
+```{r}
+eulob_search("association", limit = 5)
+eulob_search("universidad", country = "UE", limit = 5)
+```
+
+# Understanding identifiers
+
+Each record connects an organization name to an identifier
+in an official lobbying register.
+
+The `name_id` identifies a normalized name, whereas
+`lobby_id` is specific to the source register.
+
+Different register entries may share the same name.
+The catalogue does not perform global entity resolution.
+
+# Export results
+
+```{r, eval=FALSE}
+spanish <- eulob_lobbies(country = "ES")
+write.csv(spanish, "spanish_lobbies.csv", row.names = FALSE)
+```
+
+# Package information
+
+```{r}
+eulob_info()
+eulob_version()
+```

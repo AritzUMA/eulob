@@ -38,10 +38,36 @@
   toupper(trimws(country))
 }
 
-#' List Countries in the EU-LOB Catalogue
+#' List Countries and Territorial Registers in EU-LOB
 #'
-#' @param data_dir Reserved for future external data sources.
-#' @return Data frame with country, n_names and n_entities.
+#' @description
+#' Lists the territorial codes represented in the bundled EU-LOB
+#' catalogue and reports the number of distinct names and registered
+#' entities associated with each code.
+#'
+#' @details
+#' The catalogue contains national lobbying registers and the
+#' supranational EU Transparency Register. The code `"UE"` identifies
+#' the latter and is not an ISO country code.
+#'
+#' Counts are computed from the bundled catalogue. They describe
+#' indexed records, not deduplicated legal entities across Europe.
+#'
+#' @param data_dir Must be `NULL`. External catalogue directories
+#'   are not supported in this version.
+#'
+#' @return A data frame with columns:
+#'   \describe{
+#'     \item{country}{Territorial or register code.}
+#'     \item{n_names}{Number of distinct `name_id` values.}
+#'     \item{n_entities}{Number of distinct register and
+#'       `lobby_id` combinations within the code.}
+#'   }
+#'
+#' @examples
+#' eulob_countries()
+#'
+#' @seealso [eulob_registers()], [eulob_lobbies()]
 #' @export
 eulob_countries <- function(data_dir = NULL) {
   x <- .eulob_catalog("name_ids", data_dir)
@@ -64,11 +90,40 @@ eulob_countries <- function(data_dir = NULL) {
   result
 }
 
-#' List Available Lobby Registers
+#' List Lobbying Registers in EU-LOB
 #'
-#' @param country Optional country code.
-#' @param data_dir Reserved for future external data sources.
-#' @return Data frame with register-level counts.
+#' @description
+#' Lists the lobbying registers included in the bundled catalogue,
+#' optionally restricting the results to one territorial code.
+#'
+#' @details
+#' Results are ordered by territorial code and register name.
+#' The special code `"UE"` refers to the EU Transparency Register.
+#' An unknown territorial code returns an empty data frame.
+#'
+#' @param country Optional single character string identifying a
+#'   territorial code, such as `"ES"`, `"DE"` or `"UE"`.
+#'   Leading and trailing whitespace is removed and the code
+#'   is converted to uppercase.
+#' @param data_dir Must be `NULL`. External catalogue directories
+#'   are not supported in this version.
+#'
+#' @return A data frame with columns:
+#'   \describe{
+#'     \item{country}{Territorial or register code.}
+#'     \item{register}{Name of the lobbying register.}
+#'     \item{n_names}{Number of distinct `name_id` values.}
+#'     \item{n_entities}{Number of distinct `lobby_id` values
+#'       within the register.}
+#'   }
+#'   If no register matches, the data frame has zero rows.
+#'
+#' @examples
+#' eulob_registers()
+#' eulob_registers(country = "ES")
+#' eulob_registers(country = "UE")
+#'
+#' @seealso [eulob_countries()], [eulob_lobbies()]
 #' @export
 eulob_registers <- function(country = NULL, data_dir = NULL) {
   x <- .eulob_catalog("name_ids", data_dir)
@@ -111,12 +166,52 @@ eulob_registers <- function(country = NULL, data_dir = NULL) {
   out
 }
 
-#' List Lobby Names
+#' Retrieve Lobbying Organization Names and Register Identifiers
 #'
-#' @param country Optional country code.
-#' @param register Optional register name.
-#' @param data_dir Reserved for future external data sources.
-#' @return Data frame with name-identifier relationships.
+#' @description
+#' Retrieves name-to-register-identifier relationships from the
+#' bundled EU-LOB catalogue, with optional territorial and register
+#' filters.
+#'
+#' @details
+#' Each row represents a recorded relationship between a name and
+#' an identifier in a lobbying register. Rows should not be
+#' interpreted as globally deduplicated legal entities.
+#'
+#' `name_id` identifies a normalized name in the catalogue.
+#' `lobby_id` is the identifier supplied for a register entry;
+#' its format varies across registers and may be a URL.
+#'
+#' Results are ordered by normalized name, territorial code and
+#' register identifier. Register filtering uses exact matching.
+#'
+#' @param country Optional territorial code such as `"ES"` or `"UE"`.
+#'   The code is converted to uppercase.
+#' @param register Optional single register name. Matching is exact
+#'   and case-sensitive.
+#' @param data_dir Must be `NULL`. External catalogue directories
+#'   are not supported in this version.
+#'
+#' @return A data frame with six columns:
+#'   \describe{
+#'     \item{name_id}{Identifier associated with a normalized name.}
+#'     \item{name}{Recorded organization name.}
+#'     \item{name_normalized}{Normalized form used for searching
+#'       and ordering.}
+#'     \item{country}{Territorial or register code.}
+#'     \item{register}{Name of the source register.}
+#'     \item{lobby_id}{Register-specific entry identifier.}
+#'   }
+#'   Filters without matches return a zero-row data frame.
+#'
+#' @examples
+#' head(eulob_lobbies(country = "ES"))
+#' head(eulob_lobbies(
+#'   country = "DE",
+#'   register = "German Lobby Register"
+#' ))
+#'
+#' @seealso [eulob_search()], [eulob_registers()]
 #' @export
 eulob_lobbies <- function(country = NULL, register = NULL,
                           data_dir = NULL) {
@@ -128,12 +223,13 @@ eulob_lobbies <- function(country = NULL, register = NULL,
   }
 
   if (!is.null(register)) {
-    stopifnot(
-      is.character(register),
-      length(register) == 1L,
-      !is.na(register),
-      nzchar(register)
-    )
+    if (!is.character(register) ||
+        length(register) != 1L ||
+        is.na(register) ||
+        !nzchar(trimws(register))) {
+      stop("register must be a non-empty character string.",
+           call. = FALSE)
+    }
     x <- x[x$register == register, , drop = FALSE]
   }
 
@@ -148,18 +244,98 @@ eulob_lobbies <- function(country = NULL, register = NULL,
   x
 }
 
-#' Search Lobby Names
+#' Search Lobbying Organization Names
 #'
-#' Performs a case-insensitive literal substring search.
+#' @description
+#' Searches organization names in the bundled EU-LOB catalogue
+#' using configurable string-matching methods.
 #'
-#' @param query Text to search for.
-#' @param country Optional country code.
-#' @param limit Maximum number of results.
-#' @param data_dir Reserved for future external data sources.
-#' @return Data frame of matching name-identifier relationships.
+#' @details
+#' The default method is cosine similarity using character bigrams
+#' (`method = "cosine", q = 2L`).
+#'
+#' Approximate matching is implemented using the `stringdist`
+#' package. The available methods are:
+#'
+#' - `"cosine"`: cosine similarity of character q-grams.
+#' - `"jaccard"`: Jaccard similarity of character q-grams.
+#' - `"jw"`: Jaro-Winkler similarity.
+#' - `"dl"`: Damerau-Levenshtein similarity.
+#' - `"fixed"`: case-insensitive literal substring matching.
+#'
+#' Approximate methods return a similarity score between 0 and 1,
+#' where higher values indicate greater string similarity.
+#'
+#' When `min_similarity = NULL`, no minimum similarity threshold
+#' is applied. Consequently, approximate methods may return
+#' low-scoring or unrelated results when no close match exists.
+#' A positive threshold can be specified to restrict the results.
+#'
+#' The `"fixed"` method preserves the original substring-search
+#' behavior. It does not calculate similarity scores and ignores
+#' the approximate-matching parameters.
+#'
+#' Results represent name-to-register-identifier relationships,
+#' not necessarily unique legal entities. The same organization
+#' name may appear in several registers.
+#'
+#' Approximate results are ordered by decreasing similarity,
+#' followed by normalized name, territorial code and register
+#' identifier. Fixed results are ordered by normalized name,
+#' territorial code and register identifier.
+#'
+#' Similarity is lexical rather than semantic. High similarity
+#' does not establish that two names refer to the same legal
+#' entity.
+#'
+#' @param query Non-empty character string to search for.
+#' @param country Optional territorial code, such as `"ES"` or
+#'   `"UE"`. Converted to uppercase before filtering.
+#' @param limit Positive whole number specifying the maximum
+#'   number of returned rows. Default is `100L`.
+#' @param data_dir Must be `NULL`. External catalogue directories
+#'   are not supported in this version.
+#' @param method Matching algorithm. One of `"cosine"` (default),
+#'   `"jaccard"`, `"jw"`, `"dl"` or `"fixed"`.
+#' @param min_similarity Optional minimum similarity between
+#'   0 and 1. Default is `NULL`, meaning no threshold.
+#'   Used only for approximate matching.
+#' @param q Positive integer specifying the character q-gram
+#'   length for cosine and Jaccard similarity. Default is `2L`.
+#' @param p Jaro-Winkler prefix scaling factor between 0 and
+#'   0.25. Default is `0.1`. Used only with `method = "jw"`.
+#'
+#' @return A data frame containing:
+#'   \describe{
+#'     \item{name_id}{Identifier associated with a normalized name.}
+#'     \item{name}{Recorded organization name.}
+#'     \item{country}{Territorial or register code.}
+#'     \item{register}{Name of the source register.}
+#'     \item{lobby_id}{Register-specific entry identifier.}
+#'     \item{similarity}{Numeric similarity score between 0 and 1,
+#'       included only for approximate matching methods.}
+#'   }
+#'   Results are limited to the requested number of rows.
+#'   If no rows satisfy the search criteria, an empty data frame
+#'   with the corresponding columns is returned.
+#'
+#' @examples
+#' eulob_search("Siemens Mobilty", limit = 5)
+#' eulob_search("Grunenthal", method = "cosine", limit = 5)
+#' eulob_search("association", method = "fixed", limit = 5)
+#' eulob_search("university", country = "UE", limit = 5)
+#' eulob_search("Siemens", method = "jw", limit = 5)
+#' eulob_search("Siemens", min_similarity = 0.5, limit = 5)
+#' eulob_search("zzzxxyy_no_existe_123", method = "fixed")
+#'
+#' @seealso [eulob_lobbies()], [eulob_countries()]
 #' @export
 eulob_search <- function(query, country = NULL,
-                         limit = 100L, data_dir = NULL) {
+                         limit = 100L, data_dir = NULL,
+                         method = "cosine",
+                         min_similarity = NULL,
+                         q = 2L, p = 0.1) {
+
   if (!is.character(query) ||
       length(query) != 1L ||
       is.na(query) ||
@@ -178,6 +354,51 @@ eulob_search <- function(query, country = NULL,
     stop("limit must be a positive integer.", call. = FALSE)
   }
 
+  methods <- c("fixed", "jw", "dl", "cosine", "jaccard")
+
+  if (!is.character(method) ||
+      length(method) != 1L ||
+      is.na(method) ||
+      !method %in% methods) {
+    stop(
+      "method must be one of: ",
+      paste(methods, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  if (!is.null(min_similarity)) {
+    if (!is.numeric(min_similarity) ||
+        length(min_similarity) != 1L ||
+        is.na(min_similarity) ||
+        !is.finite(min_similarity) ||
+        min_similarity < 0 ||
+        min_similarity > 1) {
+      stop("min_similarity must be between 0 and 1.",
+           call. = FALSE)
+    }
+  }
+
+  if (!is.numeric(q) ||
+      length(q) != 1L ||
+      is.na(q) ||
+      !is.finite(q) ||
+      q < 1 ||
+      q != floor(q) ||
+      q > .Machine$integer.max) {
+    stop("q must be a positive integer.", call. = FALSE)
+  }
+
+  if (!is.numeric(p) ||
+      length(p) != 1L ||
+      is.na(p) ||
+      !is.finite(p) ||
+      p < 0 ||
+      p > 0.25) {
+    stop("p must be between 0 and 0.25.",
+         call. = FALSE)
+  }
+
   x <- .eulob_catalog("name_ids", data_dir)
   country <- .eulob_country(country)
 
@@ -185,17 +406,89 @@ eulob_search <- function(query, country = NULL,
     x <- x[x$country == country, , drop = FALSE]
   }
 
-  matches <- grepl(
-    tolower(query),
-    x$name_normalized,
-    fixed = TRUE
+  # Mantener intacta la búsqueda original.
+  if (method == "fixed") {
+
+    matches <- grepl(
+      tolower(query),
+      x$name_normalized,
+      fixed = TRUE
+    )
+
+    x <- x[matches, , drop = FALSE]
+
+    x <- x[
+      order(x$name_normalized, x$country, x$lobby_id),
+      c("name_id", "name", "country", "register", "lobby_id"),
+      drop = FALSE
+    ]
+
+    x <- head(x, as.integer(limit))
+    rownames(x) <- NULL
+    return(x)
+  }
+
+  # Dependencia opcional: solo necesaria para búsqueda fuzzy.
+  if (!requireNamespace("stringdist", quietly = TRUE)) {
+    stop(
+      "Package 'stringdist' is required for approximate search.",
+      call. = FALSE
+    )
+  }
+
+  # Evitar calcular varias veces la misma denominación.
+  candidates <- unique(x$name_normalized)
+
+  if (anyNA(candidates)) {
+    stop("Catalogue contains missing normalized names.",
+         call. = FALSE)
+  }
+
+  params <- list(
+    a = tolower(trimws(query)),
+    b = candidates,
+    method = method
   )
 
-  x <- x[matches, , drop = FALSE]
+  if (method %in% c("cosine", "jaccard")) {
+    params$q <- as.integer(q)
+  }
+
+  if (method == "jw") {
+    params$p <- p
+  }
+
+  scores <- do.call(stringdist::stringsim, params)
+
+  # Reasignar puntuaciones a todas las relaciones del catálogo.
+  x$similarity <- scores[
+    match(x$name_normalized, candidates)
+  ]
+
+  if (!is.null(min_similarity)) {
+    x <- x[
+      !is.na(x$similarity) &
+        x$similarity >= min_similarity,
+      ,
+      drop = FALSE
+    ]
+  }
 
   x <- x[
-    order(x$name_normalized, x$country, x$lobby_id),
-    c("name_id", "name", "country", "register", "lobby_id"),
+    order(
+      -x$similarity,
+      x$name_normalized,
+      x$country,
+      x$lobby_id
+    ),
+    c(
+      "name_id",
+      "name",
+      "country",
+      "register",
+      "lobby_id",
+      "similarity"
+    ),
     drop = FALSE
   ]
 

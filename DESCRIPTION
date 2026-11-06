@@ -24,7 +24,11 @@ Description: Provides tools for accessing and working with EU-LOB,
     organizations in the European Union.
 License: MIT + file LICENSE
 Encoding: UTF-8
-RoxygenNote: 7.3.2
 Suggests:
+    stringdist,
     DBI,
-    duckdb
+    duckdb,
+    knitr,
+    rmarkdown
+Config/roxygen2/version: 8.1.1
+VignetteBuilder: knitr

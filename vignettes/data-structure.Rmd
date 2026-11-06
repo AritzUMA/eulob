@@ -1,0 +1,143 @@
+---
+title: "Understanding the EU-LOB Catalogue"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Understanding the EU-LOB Catalogue}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# Introduction
+
+EU-LOB is a catalogue of organizations recorded in European
+lobbying registers. The eulob package provides access to a
+bundled snapshot that can be queried without internet access.
+
+This vignette describes the structure, identifiers, coverage
+and methodological limitations of the catalogue.
+
+# Register coverage
+
+The catalogue includes nine lobbying registers.
+
+| Code | Register |
+|------|----------|
+| AT | Austrian Lobbying Register |
+| CY | Cyprus Lobbying Register |
+| DE | German Lobby Register |
+| ES | Spanish CNMC Interest Groups Register |
+| FI | Finnish Transparency Register |
+| IE | Irish Register of Lobbying |
+| LT | Lithuanian Lobbyists Register |
+| RO | Romanian Lobbying Register |
+| UE | EU Transparency Register |
+
+UE represents the supranational EU register and is not an
+ISO country code.
+
+# Examine catalogue coverage
+
+```{r}
+library(eulob)
+eulob_countries()
+eulob_registers()
+```
+
+# Catalogue structure
+
+Two RDS tables are bundled with the package.
+
+## Names catalogue
+
+The names.rds table contains:
+
+- name_id: identifier associated with a normalized name.
+- name_normalized: normalized representation.
+- name: recorded name.
+- n_entities: count of associated register entries.
+- n_countries: count of associated territorial codes.
+
+## Name-to-register relationships
+
+The name_ids.rds table contains:
+
+- name_id: normalized-name identifier.
+- name_normalized: normalized name.
+- name: recorded name.
+- country: territorial or register code.
+- register: source register.
+- lobby_id: register-specific identifier.
+
+The current snapshot contains 31,238 name records and
+32,664 name-to-register relationships.
+
+# Names and registered entities
+
+A normalized name is not necessarily a unique legal entity.
+
+Different registered entities may share the same name.
+The same organization may also appear under different names.
+
+The lobby_id field contains a register-specific identifier.
+Its format varies across sources and may include official URLs.
+
+Identifiers from different registers should not be assumed
+to belong to a common identification system.
+
+# Explore Spanish and German records
+
+```{r}
+head(eulob_lobbies(country = "ES"), 5)
+head(eulob_lobbies(country = "DE"), 5)
+```
+
+# Interpreting counts
+
+The n_names field counts distinct name identifiers.
+
+The n_entities field counts distinct register identifiers
+within each register. At territorial level, combinations
+of register and identifier are used.
+
+These counts do not represent globally deduplicated entities.
+
+# Searching organizations
+
+```{r}
+eulob_search("universidad", limit = 5)
+eulob_search("association", country = "UE", limit = 5)
+```
+
+Search uses case-insensitive literal substring matching
+against normalized names.
+
+Fuzzy matching, semantic search and automatic cross-register
+entity resolution are not currently implemented.
+
+# Methodological limitations
+
+Important considerations include:
+
+- National registers may have different inclusion criteria.
+- Register coverage and reporting obligations may vary.
+- Names may contain spelling and legal-form variations.
+- Identical normalized names do not prove common identity.
+- Different identifiers may represent related organizations.
+- Absence from a register does not establish absence of lobbying.
+- Record counts are not directly comparable measures of activity.
+
+# Data provenance and reproducibility
+
+The catalogue is distributed as local RDS data.
+
+Collection dates, source-specific licensing conditions,
+normalization procedures and catalogue version identifiers
+require further verification and documentation.
+
+Researchers should record the package version and identify
+the catalogue snapshot used in their analyses.
+
+```{r}
+eulob_version()
+eulob_info()
+```
