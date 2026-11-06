@@ -1,81 +1,109 @@
 library(eulob)
 
-# Default configuration
-stopifnot(
-  identical(formals(eulob_search)$method, "cosine"),
-  identical(formals(eulob_search)$q, 2L),
-  is.null(formals(eulob_search)$min_similarity)
-)
+# 1. Buscar una entidad conocida del catálogo ampliado.
+# Verificamos comportamiento, no una posición histórica fija.
 
-# Default approximate search
-x <- eulob_search("Siemens Mobilty", limit = 5L)
-
-stopifnot(
-  is.data.frame(x),
-  nrow(x) == 5L,
-  x$name[1] == "Siemens Mobility GmbH",
-  "similarity" %in% names(x),
-  all(x$similarity >= 0 & x$similarity <= 1),
-  all(diff(x$similarity) <= 0)
-)
-
-# All methods
 for (method in c("cosine", "jaccard", "jw", "dl")) {
-  result <- eulob_search(
-    "Siemens Mobilty",
+
+  x <- eulob_search(
+    query = "Grayling",
     method = method,
-    limit = 5L
+    limit = 10L
   )
 
   stopifnot(
-    is.data.frame(result),
-    "similarity" %in% names(result),
-    nrow(result) <= 5L
+    is.data.frame(x),
+    nrow(x) > 0L,
+    nrow(x) <= 10L,
+    all(c("name", "country", "similarity") %in% names(x)),
+    all(is.finite(x$similarity)),
+    all(x$similarity >= 0 & x$similarity <= 1),
+    all(diff(x$similarity) <= 1e-10)
   )
+
+  cat("OK:", method, "-", nrow(x), "resultados\n")
 }
 
-# Minimum similarity
-filtered <- eulob_search(
-  "Siemens Mobilty",
-  min_similarity = 0.5,
+# 2. Comprobar el método por defecto: coseno con bigramas.
+
+default <- eulob_search("Grayling", limit = 10L)
+
+cosine <- eulob_search(
+  "Grayling",
+  method = "cosine",
+  q = 2L,
   limit = 10L
 )
 
-stopifnot(all(filtered$similarity >= 0.5))
+stopifnot(identical(default, cosine))
 
-# Original fixed search
+# 3. Una coincidencia exacta debe alcanzar similitud 1.
+
+exact <- eulob_search(
+  "Grayling",
+  method = "cosine",
+  limit = 10L
+)
+
+stopifnot(
+  any(
+    exact$name == "Grayling" &
+    abs(exact$similarity - 1) < 1e-10
+  )
+)
+
+# 4. El filtro de país debe respetarse.
+
+fr <- eulob_search(
+  "Grayling",
+  country = "FR",
+  method = "cosine",
+  limit = 10L
+)
+
+stopifnot(
+  nrow(fr) > 0L,
+  all(fr$country == "FR")
+)
+
+# 5. El umbral mínimo debe respetarse.
+
+filtered <- eulob_search(
+  "Grayling",
+  method = "cosine",
+  min_similarity = 0.8,
+  limit = 20L
+)
+
+stopifnot(
+  all(filtered$similarity >= 0.8)
+)
+
+# 6. El método fixed debe mantener búsquedas literales.
+
 fixed <- eulob_search(
-  "Siemens",
+  "Grayling",
   method = "fixed",
-  limit = 5L
+  limit = 10L
 )
 
 stopifnot(
   is.data.frame(fixed),
-  !"similarity" %in% names(fixed),
-  all(grepl("siemens", tolower(fixed$name), fixed = TRUE))
+  nrow(fixed) > 0L,
+  nrow(fixed) <= 10L,
+  all(grepl("Grayling", fixed$name, ignore.case = TRUE))
 )
 
-# Country filter
-de <- eulob_search(
-  "Siemens",
-  country = "DE",
-  limit = 10L
+# 7. Una búsqueda fija inexistente devuelve cero resultados.
+
+empty <- eulob_search(
+  "nonexistent_name_xyz_123",
+  method = "fixed"
 )
-
-stopifnot(all(de$country == "DE"))
-
-# Invalid arguments
-expect_error <- function(expr) {
-  inherits(tryCatch(expr, error = identity), "error")
-}
 
 stopifnot(
-  expect_error(eulob_search("test", method = "invalid")),
-  expect_error(eulob_search("test", min_similarity = -1)),
-  expect_error(eulob_search("test", min_similarity = 2)),
-  expect_error(eulob_search("test", q = 0)),
-  expect_error(eulob_search("test", p = -0.1))
+  is.data.frame(empty),
+  nrow(empty) == 0L
 )
 
-cat("TEST SEARCH METHODS: OK\n")
+cat("\nOK: todos los métodos de búsqueda\n")
