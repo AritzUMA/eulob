@@ -5,3 +5,5 @@ export(eulob_registers)
 export(eulob_lobbies)
 export(eulob_search)
 importFrom(utils,head)
+
+export(eulob_cross_registers)
