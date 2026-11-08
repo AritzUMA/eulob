@@ -13,6 +13,9 @@
 }
 
 # Internal: load the catalogue bundled with the package.
+# Cache bundled catalogues lazily within the R session.
+.eulob_catalog_cache <- new.env(parent = emptyenv())
+
 .eulob_catalog <- function(table, data_dir = NULL) {
   stopifnot(table %in% c("names", "name_ids"))
 
@@ -34,7 +37,20 @@
          call. = FALSE)
   }
 
-  readRDS(path)
+  if (!exists(table, envir = .eulob_catalog_cache,
+              inherits = FALSE)) {
+    assign(
+      table,
+      readRDS(path),
+      envir = .eulob_catalog_cache
+    )
+  }
+
+  get(
+    table,
+    envir = .eulob_catalog_cache,
+    inherits = FALSE
+  )
 }
 
 # Internal: validate optional country.
