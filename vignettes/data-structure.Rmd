@@ -18,7 +18,7 @@ and methodological limitations of the catalogue.
 
 # Register coverage
 
-The catalogue includes nine lobbying registers.
+The catalogue includes 19 territorial scopes and 21 registers.
 
 | Code | Register |
 |------|----------|
@@ -68,8 +68,8 @@ The name_ids.rds table contains:
 - register: source register.
 - lobby_id: register-specific identifier.
 
-The current snapshot contains 31,238 name records and
-32,664 name-to-register relationships.
+The current snapshot contains 40,476 name records and
+42,599 name-to-register relationships.
 
 # Names and registered entities
 
@@ -108,7 +108,7 @@ eulob_search("universidad", limit = 5)
 eulob_search("association", country = "UE", limit = 5)
 ```
 
-Search uses case-insensitive literal substring matching
+The default search uses cosine similarity over character bigrams; literal substring matching is available with `method = "fixed"`.
 against normalized names.
 
 Fuzzy matching, semantic search and automatic cross-register

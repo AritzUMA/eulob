@@ -1,3 +1,17 @@
+# Source-specific missing-name markers.
+# Preserve these records in the underlying catalogues.
+.eulob_is_placeholder_name <- function(x) {
+  !is.na(x) & trimws(x) %in% c("[nd] [nd]", "n/a")
+}
+
+# Normalize queries using the same Unicode rules as the catalog.
+.eulob_normalize_query <- function(x) {
+  x <- stringi::stri_trans_nfkc(x)
+  x <- stringi::stri_trans_casefold(x)
+  x <- gsub("[[:space:]]+", " ", x)
+  trimws(x)
+}
+
 # Internal: load the catalogue bundled with the package.
 .eulob_catalog <- function(table, data_dir = NULL) {
   stopifnot(table %in% c("names", "name_ids"))
@@ -406,11 +420,19 @@ eulob_search <- function(query, country = NULL,
     x <- x[x$country == country, , drop = FALSE]
   }
 
+  # Exclude missing-name markers from searchable results.
+  # The source records remain available through eulob_lobbies().
+  x <- x[
+    !.eulob_is_placeholder_name(x$name_normalized),
+    ,
+    drop = FALSE
+  ]
+
   # Mantener intacta la búsqueda original.
   if (method == "fixed") {
 
     matches <- grepl(
-      tolower(query),
+      .eulob_normalize_query(query),
       x$name_normalized,
       fixed = TRUE
     )
@@ -445,7 +467,7 @@ eulob_search <- function(query, country = NULL,
   }
 
   params <- list(
-    a = tolower(trimws(query)),
+    a = .eulob_normalize_query(query),
     b = candidates,
     method = method
   )

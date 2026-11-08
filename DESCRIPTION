@@ -24,8 +24,10 @@ Description: Provides tools for accessing and working with EU-LOB,
     organizations in the European Union.
 License: MIT + file LICENSE
 Encoding: UTF-8
-Suggests:
+Imports:
     stringdist,
+    stringi
+Suggests:
     DBI,
     duckdb,
     knitr,

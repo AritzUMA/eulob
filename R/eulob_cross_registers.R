@@ -65,7 +65,8 @@ eulob_cross_registers <- function(
   catalog <- .eulob_catalog("names", NULL)
 
   selected <- catalog[
-    !is.na(catalog$n_countries) &
+    !.eulob_is_placeholder_name(catalog$name_normalized) &
+      !is.na(catalog$n_countries) &
       catalog$n_countries >= min_countries,
     ,
     drop = FALSE
