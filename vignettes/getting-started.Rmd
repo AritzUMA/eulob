@@ -40,7 +40,7 @@ head(eulob_lobbies(country = "ES"))
 
 # Search organization names
 
-Searches use literal, case-insensitive substring matching.
+The default search uses cosine similarity over character bigrams; literal substring matching is available with `method = "fixed"`.
 
 ```{r}
 eulob_search("association", limit = 5)

@@ -7,22 +7,21 @@ organizations in the European Union.
 The package includes a local catalogue that can be queried
 without an internet connection.
 
-## Available lobbying registers
+## Territorial coverage
 
-| Code | Register |
-|------|----------|
-| AT | Austrian Lobbying Register |
-| CY | Cyprus Lobbying Register |
-| DE | German Lobby Register |
-| ES | Spanish CNMC Interest Groups Register |
-| FI | Finnish Transparency Register |
-| IE | Irish Register of Lobbying |
-| LT | Lithuanian Lobbyists Register |
-| RO | Romanian Lobbying Register |
-| UE | EU Transparency Register |
+The bundled catalogue contains indexed records from 19 territorial
+scopes (AT, BE, CY, CZ, DE, EE, ES, FI, FR, GR, IE, IT, LT, LU,
+LV, PL, RO, UE and UK), covering 21 registers.
 
-The code UE represents the supranational EU register and
-is not an ISO country code.
+The code `UE` represents the supranational EU Transparency
+Register and is not an ISO country code.
+
+Historical records from the Netherlands (`NL`) are retained
+outside the searchable catalogue because the available source
+does not reliably identify individual lobbying entities.
+
+Use `eulob_registers()` to inspect the registers represented
+in the installed catalogue.
 
 ## Installation
 
@@ -61,29 +60,45 @@ Inspect package metadata:
 - eulob_countries(): territorial coverage and counts.
 - eulob_registers(): available lobbying registers.
 - eulob_lobbies(): organization names and register identifiers.
-- eulob_search(): case-insensitive substring search.
+- eulob_search(): approximate name search (cosine by default),
+  with Jaccard, Jaro-Winkler, Damerau-Levenshtein and fixed
+  substring-search options.
+- eulob_cross_registers(): find names shared across registers.
 - eulob_info(): project and package metadata.
 - eulob_version(): installed package version.
 
 ## Data structure
 
-The bundled catalogue contains 31,238 distinct name records
-and 32,664 name-to-register-identifier relationships.
+The bundled catalogue contains 40,476 normalized name records,
+42,599 name-to-register-identifier relationships and
+42,265 distinct country-register-identifier keys.
 
 These relationships do not necessarily represent distinct
 legal entities.
 
 The name_id field identifies a normalized name.
-The lobby_id field contains a register-specific identifier,
-which may be an official URL.
+The lobby_id field contains a source-specific key. Depending
+on the register, this may be an official identifier or a
+synthetic identifier derived from the source data.
+
+Records can represent different source-level units, including
+registrations, participant strings and individual persons.
+They should not all be interpreted as independently verified
+lobbying organizations.
 
 ## Search limitations
 
-Searches use case-insensitive literal substring matching
-against normalized names.
+The default `eulob_search()` method uses cosine similarity
+over character bigrams. Alternative methods include Jaccard,
+Jaro-Winkler, Damerau-Levenshtein and case-insensitive literal
+substring matching (`method = "fixed"`).
 
-The package does not currently provide fuzzy matching,
-semantic search or cross-register entity resolution.
+The similarity methods compare textual denominations rather
+than semantic representations. High similarity, or the
+presence of an identical name in multiple registers, does
+not establish that records refer to the same legal entity.
+The package does not perform verified cross-register legal
+entity resolution.
 
 ## Reproducibility
 

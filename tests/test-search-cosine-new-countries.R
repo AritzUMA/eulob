@@ -5,7 +5,7 @@ countries <- eulob_countries()
 
 stopifnot(
   nrow(countries) == 19L,
-  sum(countries$n_entities) == 44214L
+  sum(countries$n_entities) == 42265L
 )
 
 # Prueba real del algoritmo de coseno implementado por eulob.

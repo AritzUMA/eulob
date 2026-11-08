@@ -11,10 +11,11 @@ catalogue of registered lobbying organizations in
 the European Union.
 }
 \details{
-The catalogue contains records from nine lobbying
-registers: Austria, Cyprus, Germany, Spain, Finland,
-Ireland, Lithuania, Romania and the EU Transparency
-Register.
+The catalogue covers 19 territorial scopes and 21 registers,
+including the supranational EU Transparency Register.
+The Netherlands is not included in the searchable catalogue
+because its available historical records do not support
+reliable identification of lobbying entities.
 
 The catalogue distinguishes normalized organization
 names from register-specific entity identifiers.

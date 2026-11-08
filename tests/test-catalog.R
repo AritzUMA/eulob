@@ -1,7 +1,7 @@
 library(eulob)
 
 # ============================================================
-# EU-LOB: pruebas del catálogo de nueve ámbitos
+# EU-LOB: pruebas del catálogo de 19 ámbitos
 # ============================================================
 
 countries <- eulob_countries()
@@ -15,11 +15,11 @@ all <- eulob_lobbies()
 
 expected_entities <- c(
   AT = 487L,
-  BE = 199L,
+  BE = 194L,
   CY = 382L,
   CZ = 134L,
   DE = 7181L,
-  EE = 4587L,
+  EE = 2643L,
   ES = 621L,
   FI = 1690L,
   FR = 4117L,
@@ -43,7 +43,7 @@ actual_entities <- setNames(
 stopifnot(
   nrow(countries) == 19L,
   setequal(countries$country, names(expected_entities)),
-  sum(countries$n_entities) == 44214L,
+  sum(countries$n_entities) == 42265L,
   nrow(registers) == 21L,
   identical(
     unname(actual_entities[names(expected_entities)]),
@@ -70,8 +70,8 @@ stopifnot(
 # 4. Integridad del catálogo de denominaciones
 
 stopifnot(
-  nrow(all) == 44548L,
-  length(unique(all$name_id)) == 42489L,
+  nrow(all) == 42599L,
+  length(unique(all$name_id)) == 40476L,
   length(unique(all$country)) == 19L
 )
 

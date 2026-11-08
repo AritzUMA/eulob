@@ -12,7 +12,7 @@
 
 ## Data
 
-- Expanded the catalog to 44,214 indexed entries.
+- Expanded the catalog to 42,265 indexed entries.
 - Updated the normalized-name and entity-reference catalogs.
 - Preserved Netherlands historical data separately because
   reliable organization identification was unavailable.

@@ -36,6 +36,41 @@ CONFIG = {
            "Belgian Chamber Lobby Register"),
 }
 
+
+def normalize_unique_dates(df):
+    """Convertir las fechas de observación a YYYY-MM-DD."""
+    from datetime import datetime
+
+    result = df.copy()
+
+    for column in ("first_seen", "last_seen"):
+        def convert(value):
+            value = str(value)
+
+            if re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+                return datetime.strptime(
+                    value, "%Y-%m-%d"
+                ).strftime("%Y-%m-%d")
+
+            match = re.search(r"20\d{6}", value)
+
+            if match is None:
+                raise ValueError(
+                    f"Fecha no reconocida: {column}={value!r}"
+                )
+
+            return datetime.strptime(
+                match.group(), "%Y%m%d"
+            ).strftime("%Y-%m-%d")
+
+        result[column] = result[column].map(convert)
+
+    if (result["first_seen"] > result["last_seen"]).any():
+        raise ValueError("Fechas de observación inconsistentes")
+
+    return result
+
+
 def snapshot_date(path):
     m = re.search(r"(20\d{6})", path.stem)
     if not m:
@@ -245,6 +280,7 @@ def build_country(country, cfg):
         history, ignore_index=True
     ).fillna("")
 
+    unique = normalize_unique_dates(unique)
     unique.to_parquet(
         STAGE / "unique" / f"{country}.parquet",
         index=False
@@ -508,6 +544,7 @@ def build_italy():
 
     (STAGE / "audit").mkdir(exist_ok=True)
 
+    unique = normalize_unique_dates(unique)
     unique.to_parquet(
         STAGE / "unique" / "IT.parquet",
         index=False
@@ -599,7 +636,7 @@ def build_czechia():
         print(f"CZ / {file.name}: {len(df)} filas")
 
     activity_snapshots = sorted({
-        item["snapshot_date"]
+        re.search(r"(20\d{6}_\d{6})", item["snapshot_file"]).group(1)
         for item in audit
         if item["record_type"] == "activity"
     })
@@ -635,6 +672,7 @@ def build_czechia():
     for folder in ("unique", "history", "audit"):
         (STAGE / folder).mkdir(parents=True, exist_ok=True)
 
+    unique = normalize_unique_dates(unique)
     unique.to_parquet(
         STAGE / "unique" / "CZ.parquet", index=False
     )
@@ -656,126 +694,23 @@ def build_czechia():
 
 
 
+
 def build_estonia():
-    """Indexar valores originales de participantes y conservar reuniones."""
+    """Reconstruir el índice estonio desde participantes estructurados."""
+    import hashlib
+    import json
     import re
+    import tempfile
+    import unicodedata
     from collections import defaultdict
+    from pathlib import Path
+    from datetime import datetime
+    import os
 
-    root = ROOT / "output" / "EE"
-    files = sorted(root.rglob("*.csv"))
+    old_root = ROOT / "output" / "EE"
+    structured_root = ROOT / "output" / "EE_structured"
 
-    if not files:
-        raise RuntimeError("No hay CSV de Estonia")
-
-    name_col = "Lobist, organisatsioon"
-    register = "Estonian Lobby Meetings - Raw Participants"
-
-    history = []
-    audit = []
-    entities = defaultdict(set)
-
-    for file in files:
-        relative = str(file.relative_to(root))
-
-        try:
-            df = pd.read_csv(
-                file,
-                dtype=str,
-                keep_default_na=False,
-                encoding="utf-8-sig",
-                low_memory=False
-            )
-        except pd.errors.EmptyDataError:
-            audit.append({
-                "snapshot_file": relative,
-                "snapshot_date": "",
-                "rows_total": 0,
-                "rows_with_participant": 0,
-                "status": "empty"
-            })
-            print(f"EE / {relative}: archivo vacío")
-            continue
-
-        match = re.fullmatch(
-            r"EE_lobby_meetings_([0-9]{4}-[0-9]{2}-[0-9]{2})[.]csv",
-            file.name
-        )
-
-        if match is None:
-            raise RuntimeError(
-                f"Archivo con datos sin fecha identificable: {relative}"
-            )
-
-        date = match.group(1)
-
-        if name_col not in df.columns:
-            raise RuntimeError(
-                f"Columna de participantes ausente: {relative}"
-            )
-
-        names_in_file = set()
-        nonempty = 0
-
-        for record in df.to_dict("records"):
-            row = dict(record)
-
-            # Conservamos literalmente todos los campos originales.
-            row["snapshot_file"] = relative
-            row["snapshot_date"] = date
-            history.append(row)
-
-            name = row[name_col].strip()
-
-            if not name:
-                continue
-
-            nonempty += 1
-            names_in_file.add(name)
-
-        for name in names_in_file:
-            entities[name].add(date)
-
-        audit.append({
-            "snapshot_file": relative,
-            "snapshot_date": date,
-            "rows_total": len(df),
-            "rows_with_participant": nonempty,
-            "status": "ok"
-        })
-
-        print(
-            f"EE / {relative}: {len(df)} filas | "
-            f"{len(names_in_file)} valores distintos",
-            flush=True
-        )
-
-    valid_dates = [
-        row["snapshot_date"]
-        for row in audit
-        if row["status"] == "ok"
-    ]
-
-    if not valid_dates:
-        raise RuntimeError("Estonia no contiene snapshots válidos")
-
-    latest = max(valid_dates)
-
-    rows = []
-
-    for name, dates_set in sorted(entities.items()):
-        dates = sorted(dates_set)
-
-        rows.append({
-            "lobby_id": name,
-            "country": "EE",
-            "register": register,
-            "name": name,
-            "first_seen": dates[0],
-            "last_seen": dates[-1],
-            "n_snapshots": len(dates),
-            "in_latest_snapshot": latest in dates_set,
-            "name_variants": [name]
-        })
+    register = "Estonian Lobby Meetings"
 
     columns = [
         "lobby_id", "country", "register", "name",
@@ -783,40 +718,394 @@ def build_estonia():
         "in_latest_snapshot", "name_variants"
     ]
 
+    def normalize(value):
+        value = unicodedata.normalize("NFKC", str(value or ""))
+        value = value.casefold()
+        return re.sub(r"\s+", " ", value).strip()
+
+    # Cada nombre normalizado identifica una entrada.
+    # Las equivalencias semánticas entre nombres diferentes
+    # no se inventan: requieren una correspondencia verificada.
+    entities = defaultdict(lambda: {
+        "dates": set(),
+        "variants": set()
+    })
+
+    history = []
+    audit = []
+    snapshots = set()
+
+    def add_participants(participants, snapshot):
+        if not isinstance(participants, list):
+            raise RuntimeError("participants_json no contiene una lista")
+
+        count = 0
+
+        for participant in participants:
+            if not isinstance(participant, dict):
+                raise RuntimeError("Participante no estructurado")
+
+            name = participant.get("organization") or ""
+
+            if not isinstance(name, str):
+                raise RuntimeError("Nombre de organización inválido")
+
+            if not name.strip():
+                continue
+
+            normalized = normalize(name)
+
+            if not normalized:
+                continue
+
+            entities[normalized]["dates"].add(snapshot)
+            entities[normalized]["variants"].add(name.strip())
+            count += 1
+
+        return count
+
+    # =========================================================
+    # 1. HISTÓRICOS REPARADOS
+    # =========================================================
+
+    old_files = sorted(
+        old_root.glob("EE_lobby_meetings_*.csv")
+    )
+
+    if len(old_files) != 11:
+        raise RuntimeError(
+            f"Esperados 11 históricos EE; encontrados {len(old_files)}"
+        )
+
+    historical_rows = 0
+
+    for file in old_files:
+        match = re.fullmatch(
+            r"EE_lobby_meetings_([0-9]{4}-[0-9]{2}-[0-9]{2})[.]csv",
+            file.name
+        )
+
+        if not match:
+            raise RuntimeError(f"Fecha inválida: {file.name}")
+
+        snapshot = match.group(1)
+        datetime.strptime(snapshot, "%Y-%m-%d")
+
+        df = pd.read_csv(
+            file,
+            dtype=str,
+            keep_default_na=False,
+            encoding="utf-8-sig"
+        )
+
+        required = [
+            "Kohtumise aeg  Sort ascending",
+            "Teema",
+            "Asutus",
+            "Ametiisik",
+            "Lobist, organisatsioon",
+            "participants_json",
+            "participants_parse_status"
+        ]
+
+        if any(col not in df.columns for col in required):
+            raise RuntimeError(
+                f"Histórico sin reparar: {file.name}"
+            )
+
+        if (df["snapshot_date"] != snapshot).any():
+            raise RuntimeError(
+                f"Fecha de captura inconsistente: {file.name}"
+            )
+
+        count = 0
+
+        for record in df.to_dict("records"):
+            status = record["participants_parse_status"]
+
+            if status not in (
+                "parsed", "repaired_manual", "empty"
+            ):
+                raise RuntimeError(
+                    f"Registro pendiente en {file.name}: {status}"
+                )
+
+            participants = json.loads(
+                record["participants_json"]
+            )
+
+            if status == "empty" and participants:
+                raise RuntimeError("Fila vacía con participantes")
+
+            count += add_participants(
+                participants, snapshot
+            )
+
+            # Conservar literalmente todas las columnas
+            # y los contenidos históricos.
+            row = dict(record)
+            row["snapshot_file"] = file.name
+            row["snapshot_date"] = snapshot
+            history.append(row)
+
+        snapshots.add(snapshot)
+        historical_rows += len(df)
+
+        audit.append({
+            "snapshot_file": file.name,
+            "snapshot_date": snapshot,
+            "rows_total": len(df),
+            "rows_with_participant": count,
+            "status": "ok"
+        })
+
+        print(
+            f"EE histórico / {file.name}: "
+            f"{len(df)} reuniones | "
+            f"{count} participaciones con organización",
+            flush=True
+        )
+
+    if historical_rows != 66130:
+        raise RuntimeError(
+            f"Esperadas 66130 filas históricas: {historical_rows}"
+        )
+
+    # =========================================================
+    # 2. EXTRACCIONES ESTRUCTURADAS, ACTUALES Y FUTURAS
+    # =========================================================
+
+    structured_files = sorted(
+        structured_root.glob("full_*/meetings.csv")
+    )
+
+    if not structured_files:
+        raise RuntimeError(
+            "No se encuentran capturas estructuradas de Estonia"
+        )
+
+    structured_rows = 0
+
+    for file in structured_files:
+        manifest_path = file.parent / "manifest.json"
+
+        if not manifest_path.is_file():
+            raise RuntimeError(
+                f"Falta manifest: {file.parent}"
+            )
+
+        manifest = json.loads(
+            manifest_path.read_text(encoding="utf-8")
+        )
+
+        if manifest.get("status") != "complete_verified":
+            raise RuntimeError(
+                f"Captura no verificada: {file.parent}"
+            )
+
+        df = pd.read_csv(
+            file,
+            dtype=str,
+            keep_default_na=False,
+            encoding="utf-8-sig"
+        )
+
+        required = [
+            "collected_at", "meeting_date", "topic",
+            "institution", "participants_json"
+        ]
+
+        if any(col not in df.columns for col in required):
+            raise RuntimeError(
+                f"Esquema estructurado incompatible: {file}"
+            )
+
+        dates = set()
+        count = 0
+
+        for record in df.to_dict("records"):
+            collected_at = record["collected_at"]
+
+            if not collected_at:
+                raise RuntimeError(
+                    f"Captura sin collected_at: {file}"
+                )
+
+            # Fecha de captura, nunca fecha de reunión.
+            snapshot = datetime.fromisoformat(
+                collected_at.replace("Z", "+00:00")
+            ).date().isoformat()
+
+            dates.add(snapshot)
+
+            participants = json.loads(
+                record["participants_json"]
+            )
+
+            count += add_participants(
+                participants, snapshot
+            )
+
+            row = dict(record)
+            row["snapshot_file"] = str(
+                file.relative_to(ROOT / "output")
+            )
+            row["snapshot_date"] = snapshot
+
+            history.append(row)
+
+        if len(dates) != 1:
+            raise RuntimeError(
+                f"Captura con varias fechas: {file}"
+            )
+
+        snapshot = next(iter(dates))
+        snapshots.add(snapshot)
+        structured_rows += len(df)
+
+        audit.append({
+            "snapshot_file": str(
+                file.relative_to(ROOT / "output")
+            ),
+            "snapshot_date": snapshot,
+            "rows_total": len(df),
+            "rows_with_participant": count,
+            "status": "ok"
+        })
+
+        print(
+            f"EE estructurado / {file.parent.name}: "
+            f"{len(df)} reuniones | "
+            f"{count} participaciones con organización",
+            flush=True
+        )
+
+    # =========================================================
+    # 3. ÍNDICE DE ORGANIZACIONES
+    # =========================================================
+
+    latest = max(snapshots)
+    rows = []
+
+    for normalized, info in sorted(entities.items()):
+        dates = sorted(info["dates"])
+        variants = sorted(
+            info["variants"],
+            key=lambda x: (normalize(x), x)
+        )
+
+        lobby_id = "name:" + hashlib.sha256(
+            normalized.encode("utf-8")
+        ).hexdigest()
+
+        rows.append({
+            "lobby_id": lobby_id,
+            "country": "EE",
+            "register": register,
+            "name": variants[0],
+            "first_seen": dates[0],
+            "last_seen": dates[-1],
+            "n_snapshots": len(dates),
+            "in_latest_snapshot": latest in info["dates"],
+            "name_variants": variants
+        })
+
     unique = pd.DataFrame(rows, columns=columns)
 
-    for folder in ("unique", "history", "audit"):
-        (STAGE / folder).mkdir(parents=True, exist_ok=True)
+    if unique.empty:
+        raise RuntimeError("Índice EE vacío")
 
-    unique.to_parquet(
-        STAGE / "unique" / "EE.parquet",
-        index=False
-    )
+    unique["n_snapshots"] = unique[
+        "n_snapshots"
+    ].astype("int64")
 
-    pd.DataFrame(history).to_parquet(
-        STAGE / "history" / "EE.parquet",
-        index=False
-    )
-
-    pd.DataFrame(audit).to_csv(
-        STAGE / "audit" / "EE_snapshots.csv",
-        index=False
-    )
+    unique["in_latest_snapshot"] = unique[
+        "in_latest_snapshot"
+    ].astype(bool)
 
     if unique.duplicated(
         ["country", "register", "lobby_id"]
     ).any():
-        raise RuntimeError("Duplicados en índice EE")
+        raise RuntimeError("Identificadores duplicados EE")
+
+    if not unique["name"].map(normalize).is_unique:
+        raise RuntimeError("Nombres normalizados duplicados")
+
+    # =========================================================
+    # 4. GUARDAR EN EL STAGING EXISTENTE
+    # =========================================================
+
+    for folder in ("unique", "history", "audit"):
+        (STAGE / folder).mkdir(parents=True, exist_ok=True)
+
+    reference = STAGE / "unique" / "AT.parquet"
+
+    if not reference.exists():
+        raise RuntimeError(
+            "Falta índice AT para validar esquema y tipos"
+        )
+
+    # Validar primero en un directorio temporal que se
+    # elimina automáticamente después de la operación.
+    with tempfile.TemporaryDirectory(
+        prefix="ee_validate_", dir=STAGE
+    ) as tmp:
+        tmp = Path(tmp)
+
+        unique_tmp = tmp / "EE.parquet"
+        history_tmp = tmp / "EE_history.parquet"
+        audit_tmp = tmp / "EE_snapshots.csv"
+
+        unique = normalize_unique_dates(unique)
+        unique.to_parquet(unique_tmp, index=False)
+        pd.DataFrame(history).to_parquet(
+            history_tmp, index=False
+        )
+        pd.DataFrame(audit).to_csv(
+            audit_tmp, index=False
+        )
+
+        ref = pd.read_parquet(reference)
+        check = pd.read_parquet(unique_tmp)
+
+        if list(check.columns) != list(ref.columns):
+            raise RuntimeError("Esquema EE incompatible")
+
+        for col in ref.columns:
+            if str(check[col].dtype) != str(ref[col].dtype):
+                raise RuntimeError(
+                    f"Tipo incompatible EE/{col}: "
+                    f"{check[col].dtype} != {ref[col].dtype}"
+                )
+
+        if len(check) != len(unique):
+            raise RuntimeError("Error al guardar índice EE")
+
+        if len(pd.read_parquet(history_tmp)) != len(history):
+            raise RuntimeError("Error al guardar histórico EE")
+
+        # Solo ahora se sustituyen los ficheros
+        # derivados de Estonia, nunca otros países.
+        os.replace(
+            unique_tmp, STAGE / "unique" / "EE.parquet"
+        )
+        os.replace(
+            history_tmp, STAGE / "history" / "EE.parquet"
+        )
+        os.replace(
+            audit_tmp, STAGE / "audit" / "EE_snapshots.csv"
+        )
 
     print(
-        f"EE: {len(files)} archivos | "
-        f"{len(history)} observaciones | "
-        f"{len(unique)} valores indexados",
+        f"EE: {len(old_files)} históricos antiguos | "
+        f"{len(structured_files)} capturas estructuradas | "
+        f"{len(history)} reuniones-observación | "
+        f"{len(unique)} nombres normalizados | "
+        f"{len(snapshots)} fechas de captura",
         flush=True
     )
 
     return unique
-
 
 
 
@@ -990,6 +1279,7 @@ def build_luxembourg():
     for folder in ("unique", "history", "audit"):
         (STAGE / folder).mkdir(parents=True, exist_ok=True)
 
+    unique = normalize_unique_dates(unique)
     unique.to_parquet(
         STAGE / "unique" / "LU.parquet",
         index=False
@@ -1344,6 +1634,7 @@ def build_poland():
     for folder in ("unique", "history", "audit"):
         (STAGE / folder).mkdir(parents=True, exist_ok=True)
 
+    unique = normalize_unique_dates(unique)
     unique.to_parquet(
         STAGE / "unique" / "PL.parquet",
         index=False
@@ -1621,6 +1912,7 @@ def build_united_kingdom():
             "Identificadores UK duplicados"
         )
 
+    unique = normalize_unique_dates(unique)
     unique.to_parquet(
         STAGE / "unique" / "UK.parquet",
         index=False
@@ -1658,8 +1950,9 @@ def main():
     for country in ("DE", "UE"):
         src = DATA / "unique" / f"{country}.parquet"
         dst = STAGE / "unique" / f"{country}.parquet"
-        shutil.copy2(src, dst)
-        indexes.append(pd.read_parquet(dst))
+        df = normalize_unique_dates(pd.read_parquet(src))
+        df.to_parquet(dst, index=False)
+        indexes.append(df)
 
     for country, cfg in CONFIG.items():
         indexes.append(build_country(country, cfg))
@@ -1750,5 +2043,209 @@ def main():
     print("CANDIDATO CONSTRUIDO CORRECTAMENTE")
     print("Directorio:", STAGE)
 
+
+
+def rebuild_global_indexes():
+    """Regenerar índices globales desde los índices nacionales existentes."""
+    import os
+    import tempfile
+
+    countries = (
+        "AT", "BE", "CY", "CZ", "DE", "EE", "ES",
+        "FI", "FR", "GR", "IE", "IT", "LT", "LU",
+        "LV", "PL", "RO", "UE", "UK"
+    )
+
+    keys = ["country", "register", "lobby_id"]
+    source = STAGE / "unique"
+    indexes_dir = STAGE / "indexes"
+
+    print("========== ÍNDICES NACIONALES ==========", flush=True)
+
+    available = {
+        p.stem for p in source.glob("*.parquet")
+        if p.stem != "NL"
+    }
+
+    if available != set(countries):
+        raise RuntimeError(
+            f"Ámbitos inesperados: {available ^ set(countries)}"
+        )
+
+    frames = []
+
+    for country in countries:
+        df = pd.read_parquet(source / f"{country}.parquet")
+
+        if df.empty:
+            raise RuntimeError(f"{country}: índice vacío")
+
+        if not df["country"].eq(country).all():
+            raise RuntimeError(f"{country}: país inconsistente")
+
+        if df.duplicated(keys).any():
+            raise RuntimeError(f"{country}: IDs duplicados")
+
+        frames.append(df)
+        print(f"{country}: {len(df):,}", flush=True)
+
+    combined = pd.concat(frames, ignore_index=True)
+
+    if combined.duplicated(keys).any():
+        raise RuntimeError("Duplicados en índice global")
+
+    old_path = indexes_dir / "all_lobbies.parquet"
+    old = pd.read_parquet(old_path)
+
+    if list(old.columns) != list(combined.columns):
+        raise RuntimeError("Esquema incompatible")
+
+    old_keys = set(
+        old[keys].itertuples(index=False, name=None)
+    )
+    new_keys = set(
+        combined[keys].itertuples(index=False, name=None)
+    )
+
+    missing = old_keys - new_keys
+
+    if missing:
+        raise RuntimeError(
+            f"Desaparecerían {len(missing)} entidades históricas. "
+            f"Ejemplos: {list(sorted(missing))[:5]}"
+        )
+
+    script = ROOT / "scripts" / "build_name_catalog.py"
+    spec = importlib.util.spec_from_file_location(
+        "eulob_name_catalog", script
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    with tempfile.TemporaryDirectory(
+        prefix=".eulob_rebuild_",
+        dir=STAGE
+    ) as directory:
+
+        tmp = Path(directory)
+        candidate_all = tmp / "all_lobbies.parquet"
+
+        combined.to_parquet(candidate_all, index=False)
+
+        module.SOURCE = source
+        module.DEST = tmp / "names"
+        module.COUNTRIES = countries
+        module.main()
+
+        candidate_names = module.DEST / "names.parquet"
+        candidate_relations = module.DEST / "name_ids.parquet"
+
+        check_all = pd.read_parquet(candidate_all)
+        names = pd.read_parquet(candidate_names)
+        relations = pd.read_parquet(candidate_relations)
+
+        recovered = set(
+            relations[keys].itertuples(index=False, name=None)
+        )
+
+        if recovered != new_keys:
+            raise RuntimeError("Integridad de entidades incorrecta")
+
+        if len(check_all) != len(new_keys):
+            raise RuntimeError("Recuento global inconsistente")
+
+        if not names["name_id"].is_unique:
+            raise RuntimeError("Nombres duplicados")
+
+        if relations.duplicated(
+            ["name_id", *keys]
+        ).any():
+            raise RuntimeError("Relaciones duplicadas")
+
+        if set(names["name_id"]) != set(relations["name_id"]):
+            raise RuntimeError("Catálogo de nombres inconsistente")
+
+        print("\n========== VALIDACIÓN ==========")
+        print("Entidades:", len(check_all))
+        print("Nombres:", len(names))
+        print("Relaciones:", len(relations))
+        print("Entidades desaparecidas:", len(missing))
+
+        replacements = [
+            (candidate_all, old_path),
+            (
+                candidate_names,
+                indexes_dir / "names" / "names.parquet"
+            ),
+            (
+                candidate_relations,
+                indexes_dir / "names" / "name_ids.parquet"
+            )
+        ]
+
+        backup = tmp / "previous"
+        backup.mkdir()
+
+        for i, (_, destination) in enumerate(replacements):
+            if not destination.is_file():
+                raise FileNotFoundError(destination)
+
+            shutil.copy2(
+                destination,
+                backup / f"{i}.parquet"
+            )
+
+        completed = []
+
+        try:
+            for i, (candidate, destination) in enumerate(replacements):
+                os.replace(candidate, destination)
+                completed.append((i, destination))
+
+            final_all = pd.read_parquet(old_path)
+            final_names = pd.read_parquet(
+                indexes_dir / "names" / "names.parquet"
+            )
+            final_relations = pd.read_parquet(
+                indexes_dir / "names" / "name_ids.parquet"
+            )
+
+            if (
+                len(final_all) != len(check_all)
+                or len(final_names) != len(names)
+                or len(final_relations) != len(relations)
+            ):
+                raise RuntimeError("Verificación posterior incorrecta")
+
+            final_keys = set(
+                final_all[keys].itertuples(index=False, name=None)
+            )
+            final_recovered = set(
+                final_relations[keys].itertuples(index=False, name=None)
+            )
+
+            if final_keys != new_keys or final_recovered != new_keys:
+                raise RuntimeError("Integridad posterior incorrecta")
+
+        except Exception:
+            for i, destination in reversed(completed):
+                os.replace(
+                    backup / f"{i}.parquet",
+                    destination
+                )
+            raise
+
+    print("\nÍNDICES GLOBALES RECONSTRUIDOS CORRECTAMENTE")
+    print("Staging:", STAGE)
+    print("Entidades:", len(combined))
+    print("Nombres:", len(names))
+    print("Relaciones:", len(relations))
+
+
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) == 2 and sys.argv[1] == "--rebuild-global":
+        rebuild_global_indexes()
+    elif len(sys.argv) == 1:
+        main()
+    else:
+        raise SystemExit("Uso: build_expand_countries.py [--rebuild-global]")
