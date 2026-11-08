@@ -2,3 +2,4 @@
 ^.*[.]Rcheck$
 ^.*[.]tar[.]gz$
 ^DESCRIPTION[.]backup_cran$
+^scripts$

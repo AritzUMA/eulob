@@ -86,7 +86,7 @@ eulob_search_normalized <- function(
       "the", "of", "for", "and", "or",
       "et", "de", "des", "du", "la", "le", "les",
       "der", "die", "das", "den", "dem",
-      "und", "für", "von", "am", "in", "im",
+      "und", "f\u00fcr", "von", "am", "in", "im",
       "auf", "an", "ein", "eine", "au", "aux",
       "a", "e", "v", "co", "s", "p",
       "ev", "asbl", "gmbh", "ggmbh",
@@ -95,23 +95,23 @@ eulob_search_normalized <- function(
       "oy", "oyj", "bv", "nv", "llc",
       "se", "spa", "company", "group",
       "european", "international",
-      "association", "asociacion", "asociación",
+      "association", "asociacion", "asociaci\u00f3n",
       "associazione", "verband", "bundesverband",
       "deutscher", "deutsche", "deutschen",
       "deutsches", "gesellschaft", "nationale",
-      "national", "français", "française",
+      "national", "fran\u00e7ais", "fran\u00e7aise",
       "francais", "francaise",
-      "federation", "fédération",
-      "foundation", "fundacion", "fundación",
+      "federation", "f\u00e9d\u00e9ration",
+      "foundation", "fundacion", "fundaci\u00f3n",
       "fondation", "stiftung", "union",
       "entreprise", "entreprises",
       "empresa", "empresas", "syndicat",
       "institut", "institute", "comite",
-      "comité", "polskie", "stowarzyszenie",
+      "comit\u00e9", "polskie", "stowarzyszenie",
       "bundesvereinigung",
       "bundesarbeitsgemeinschaft",
-      "societe", "société", "sociedad",
-      "società", "deutsch", "europe",
+      "societe", "soci\u00e9t\u00e9", "sociedad",
+      "societ\u00e0", "deutsch", "europe",
       "france", "germany", "deutschland",
       "italy", "ireland", "finland",
       "belgium", "belgique"
@@ -148,7 +148,7 @@ eulob_search_normalized <- function(
   }
 
   datos <- datos[
-    complete.cases(datos) &
+    stats::complete.cases(datos) &
       nzchar(datos$name) &
       nzchar(datos$country) &
       nzchar(datos$register) &
@@ -320,9 +320,9 @@ eulob_search_normalized <- function(
   if (method != "strict") {
 
     prohibidos <- c(
-      "association", "asociacion", "asociación",
+      "association", "asociacion", "asociaci\u00f3n",
       "european", "international", "federation",
-      "fédération", "bundesverband", "verband",
+      "f\u00e9d\u00e9ration", "bundesverband", "verband",
       "stiftung", "company", "the", "union",
       "deutsche", "deutscher", "eesti"
     )
