@@ -7,21 +7,42 @@ organizations in the European Union.
 The package includes a local catalogue that can be queried
 without an internet connection.
 
-## Territorial coverage
+## Available lobbying registers
 
-The bundled catalogue contains indexed records from 19 territorial
-scopes (AT, BE, CY, CZ, DE, EE, ES, FI, FR, GR, IE, IT, LT, LU,
-LV, PL, RO, UE and UK), covering 21 registers.
+The catalogue covers 19 territorial scopes and 21 lobbying registers.
 
-The code `UE` represents the supranational EU Transparency
-Register and is not an ISO country code.
+| Code | Country / Territory | Lobbying register |
+|---|---|---|
+| AT | Austria | Austrian Lobbying Register |
+| BE | Belgium | Belgian Chamber Lobby Register |
+| CY | Cyprus | Cyprus Lobbying Register |
+| CZ | Czech Republic | Czech RELOB |
+| DE | Germany | German Lobby Register |
+| EE | Estonia | Estonian Lobby Meetings |
+| ES | Spain | Spanish CNMC Interest Groups Register |
+| FI | Finland | Finnish Transparency Register |
+| FR | France | French HATVP Register |
+| GR | Greece | Greek Lobbying Register |
+| IE | Ireland | Irish Register of Lobbying |
+| IT | Italy | Camera dei Deputati |
+| IT | Italy | Italian MIMIT Register |
+| IT | Italy | Tuscany Interest Groups Register |
+| LT | Lithuania | Lithuanian Lobbyists Register |
+| LU | Luxembourg | Luxembourg Chamber Interest Representatives |
+| LV | Latvia | Latvian Lobbying Register |
+| PL | Poland | Polish Professional Lobbying Register |
+| RO | Romania | Romanian Lobbying Register |
+| UE | European Union | EU Transparency Register |
+| UK | United Kingdom | UK Consultant Lobbyists Register |
 
-Historical records from the Netherlands (`NL`) are retained
-outside the searchable catalogue because the available source
-does not reliably identify individual lobbying entities.
+The code `UE` represents the supranational EU Transparency Register
+and is not an ISO country code.
 
-Use `eulob_registers()` to inspect the registers represented
-in the installed catalogue.
+Historical records from the Netherlands (`NL`) are retained outside
+the searchable catalogue because the available source does not reliably
+identify individual lobbying entities.
+
+Use `eulob_registers()` to inspect the available registers.
 
 ## Installation
 
