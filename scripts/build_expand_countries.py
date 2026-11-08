@@ -98,6 +98,18 @@ def build_country(country, cfg):
         key=lambda p: (snapshot_date(p), p.name)
     )
 
+    # Grecia: utilizar solo capturas posteriores a la corrección.
+    if country == "GR":
+        cutoff = "20261108_223022"
+        files = [
+            p for p in files
+            if p.name.startswith("GR_lobbying_")
+            and p.name.endswith(".csv")
+            and len(p.stem.removeprefix("GR_lobbying_")) == 15
+            and p.stem.removeprefix("GR_lobbying_").replace("_", "").isdigit()
+            and p.stem.removeprefix("GR_lobbying_") >= cutoff
+        ]
+
     if not files:
         raise RuntimeError(f"{country}: sin snapshots")
 
@@ -190,10 +202,6 @@ def build_country(country, cfg):
 
         valid = df.loc[valid_mask].copy()
 
-        if country == "GR":
-            kind = valid["Ιδιότητα"].str.strip()
-            excluded = kind.eq("Αυτοαπασχολούμενος/η")
-            valid = valid.loc[~excluded].copy()
 
         if country in ("FR", "GR"):
             counts = valid.groupby(id_col)[name_col].nunique()
@@ -1456,7 +1464,200 @@ def build_netherlands():
 
 
 
+
 def build_poland():
+    """Construir Polonia usando exclusivamente capturas Docling."""
+    import re
+    from collections import defaultdict
+
+    root = ROOT / "output" / "PL"
+    register = "Polish Professional Lobbying Register"
+
+    pattern = re.compile(
+        r"^Poland_Professional_Lobbying_Register_"
+        r"(20\d{6})_(\d{6})\.csv$"
+    )
+
+    files = []
+    for path in root.glob("*.csv"):
+        match = pattern.fullmatch(path.name)
+        if match:
+            files.append((match.group(1) + "_" + match.group(2), path))
+
+    files.sort()
+
+    if not files:
+        raise RuntimeError("PL: no hay capturas Docling fechadas")
+
+    stamps = [stamp for stamp, _ in files]
+    if len(stamps) != len(set(stamps)):
+        raise RuntimeError("PL: timestamps duplicados")
+
+    required = {
+        "numer_kolejny", "data_wpisu", "nazwa",
+        "adres", "krs", "data_wykreslenia",
+        "sygnatura_akt", "uwagi", "pagina_pdf"
+    }
+
+    entities = {}
+    variants = defaultdict(set)
+    observations = defaultdict(set)
+    history = []
+    audit = []
+
+    latest_stamp = stamps[-1]
+    latest_ids = set()
+
+    for stamp, path in files:
+        df = pd.read_csv(
+            path,
+            dtype=str,
+            keep_default_na=False,
+            encoding="utf-8-sig",
+            low_memory=False
+        )
+
+        missing = required - set(df.columns)
+        if missing:
+            raise RuntimeError(
+                f"{path.name}: faltan columnas {sorted(missing)}"
+            )
+
+        df["numer_kolejny"] = df["numer_kolejny"].str.strip()
+        df["nazwa"] = df["nazwa"].str.strip()
+
+        if df.empty:
+            raise RuntimeError(f"{path.name}: CSV vacío")
+
+        if not df["numer_kolejny"].str.fullmatch(r"\d{5}").all():
+            raise RuntimeError(
+                f"{path.name}: identificadores incorrectos"
+            )
+
+        if df["numer_kolejny"].duplicated().any():
+            raise RuntimeError(
+                f"{path.name}: identificadores duplicados"
+            )
+
+        if df["nazwa"].isin(["", "-"]).any():
+            raise RuntimeError(f"{path.name}: nombres vacíos")
+
+        if df["nazwa"].str.fullmatch(r"[\d\s./-]+").any():
+            raise RuntimeError(
+                f"{path.name}: posibles fechas en nombres"
+            )
+
+        date = (
+            stamp[:4] + "-" +
+            stamp[4:6] + "-" +
+            stamp[6:8]
+        )
+
+        current_ids = set(df["numer_kolejny"])
+
+        for record in df.to_dict("records"):
+            identifier = record["numer_kolejny"]
+            name = record["nazwa"]
+
+            history.append({
+                **record,
+                "snapshot_file": path.name,
+                "snapshot_date": date,
+                "lobby_id": identifier,
+                "country": "PL",
+                "register": register,
+                "extraction_method": "docling"
+            })
+
+            variants[identifier].add(name)
+            observations[identifier].add(stamp)
+
+            # Nombre de la captura más reciente observada.
+            entities[identifier] = name
+
+        if stamp == latest_stamp:
+            latest_ids = current_ids
+
+        audit.append({
+            "country": "PL",
+            "snapshot_file": path.name,
+            "snapshot_date": stamp,
+            "rows_total": len(df),
+            "distinct_entries": len(current_ids),
+            "rows_incomplete": 0,
+            "rows_date_as_name": 0
+        })
+
+        print(
+            f"PL / {path.name}: {len(df)} inscripciones",
+            flush=True
+        )
+
+    rows = []
+
+    for identifier in sorted(entities):
+        seen = sorted(observations[identifier])
+
+        rows.append({
+            "lobby_id": identifier,
+            "country": "PL",
+            "register": register,
+            "name": entities[identifier],
+            "first_seen": seen[0],
+            "last_seen": seen[-1],
+            "n_snapshots": len(seen),
+            "in_latest_snapshot": identifier in latest_ids,
+            "name_variants": sorted(variants[identifier])
+        })
+
+    columns = [
+        "lobby_id", "country", "register", "name",
+        "first_seen", "last_seen", "n_snapshots",
+        "in_latest_snapshot", "name_variants"
+    ]
+
+    unique = pd.DataFrame(rows, columns=columns)
+    unique = normalize_unique_dates(unique)
+
+    for folder in ("unique", "history", "audit"):
+        (STAGE / folder).mkdir(parents=True, exist_ok=True)
+
+    unique.to_parquet(
+        STAGE / "unique" / "PL.parquet",
+        index=False
+    )
+
+    pd.DataFrame(history).to_parquet(
+        STAGE / "history" / "PL.parquet",
+        index=False
+    )
+
+    pd.DataFrame(audit).to_csv(
+        STAGE / "audit" / "PL_snapshots.csv",
+        index=False
+    )
+
+    pd.DataFrame(
+        columns=[
+            "snapshot_file", "row_number",
+            "numer_kolejny", "nazwa", "reason"
+        ]
+    ).to_csv(
+        STAGE / "audit" / "PL_pending_review.csv",
+        index=False
+    )
+
+    print(
+        f"PL: {len(files)} capturas Docling | "
+        f"{len(history)} observaciones | "
+        f"{len(unique)} inscripciones únicas",
+        flush=True
+    )
+
+    return unique
+
+
+def build_poland_legacy():
     """Conservar todas las capturas y evitar fusionar entidades distintas."""
     import hashlib
     import re
@@ -1464,7 +1665,10 @@ def build_poland():
     from collections import defaultdict
 
     root = ROOT / "output" / "PL"
-    files = sorted(root.rglob("*.csv"))
+    files = sorted(
+        p for p in root.rglob("*.csv")
+        if p.name != "PL_docling_658_provisional.csv"
+    )
 
     if not files:
         raise RuntimeError("No hay CSV de Polonia")
@@ -2109,10 +2313,37 @@ def rebuild_global_indexes():
 
     missing = old_keys - new_keys
 
-    if missing:
+    # Polonia: migración de IDs provisionales con hash
+    # a números oficiales de cinco dígitos.
+    legacy_pl = {
+        key for key in missing
+        if key[0] == "PL"
+        and key[1] == "Polish Professional Lobbying Register"
+        and re.fullmatch(
+            r"[0-9]{5}:[0-9a-f]{64}", str(key[2])
+        )
+    }
+
+    if legacy_pl:
+        current_pl = combined.loc[combined.country == "PL"]
+        if len(legacy_pl) != 704 or len(current_pl) != 658:
+            raise RuntimeError(
+                "PL: migración histórica no reconocida"
+            )
+        if not current_pl.lobby_id.astype(str).str.fullmatch(
+            r"[0-9]{5}"
+        ).all():
+            raise RuntimeError(
+                "PL: identificadores oficiales inválidos"
+            )
+
+    unexpected_missing = missing - legacy_pl
+
+    if unexpected_missing:
         raise RuntimeError(
-            f"Desaparecerían {len(missing)} entidades históricas. "
-            f"Ejemplos: {list(sorted(missing))[:5]}"
+            f"Desaparecerían {len(unexpected_missing)} "
+            f"entidades históricas. "
+            f"Ejemplos: {list(sorted(unexpected_missing))[:5]}"
         )
 
     script = ROOT / "scripts" / "build_name_catalog.py"
