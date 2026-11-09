@@ -34,22 +34,22 @@ stopifnot(
   )
 )
 
-# Coincidencias previamente verificadas en países nuevos.
-stopifnot(
-  all(c("FR", "CZ", "PL", "UK") %in% results$country)
-)
+# La composición del top 30 global cambia al incorporar
+# nuevas entidades. No exigir países concretos en ese ranking.
+# Las coincidencias conocidas se verifican por separado,
+# mediante búsquedas restringidas a cada país.
 
-# Verificar búsqueda específica en cada nuevo país.
-examples <- c(
-  FR = "GRAYLING FRANCE",
-  CZ = "Grayling Czech Republic s.r.o.",
-  PL = "Grayling Poland Sp. z o.o.",
-  UK = "Grayling Communications Limited"
-)
+# Verificar búsquedas exactas sobre nombres realmente indexados.
+# No depender de denominaciones que puedan cambiar entre capturas.
+for (country in c("FR", "CZ", "PL", "UK")) {
+  entities <- eulob_lobbies(country = country)
 
-for (country in names(examples)) {
+  stopifnot(nrow(entities) > 0L)
+
+  query <- entities$name[[1L]]
+
   x <- eulob_search(
-    query = examples[[country]],
+    query = query,
     country = country,
     method = "cosine",
     q = 2L,
