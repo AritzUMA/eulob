@@ -31,6 +31,7 @@ an internet connection.
   \item \code{eulob_registers()}: Available registers.
   \item \code{eulob_lobbies()}: Name and identifier records.
   \item \code{eulob_search()}: Search organization names.
+  \item \code{eulob_cross_registers()}: Shared names across registers.
   \item \code{eulob_info()}: Project metadata.
   \item \code{eulob_version()}: Package version.
 }
@@ -40,7 +41,8 @@ an internet connection.
 \code{\link{eulob_countries}},
 \code{\link{eulob_registers}},
 \code{\link{eulob_lobbies}},
-\code{\link{eulob_search}}
+\code{\link{eulob_search}},
+\code{\link{eulob_cross_registers}}
 }
 \author{
 \strong{Maintainer}: Aritz Gorostiza Cerviño \email{olivetti03@uma.es}

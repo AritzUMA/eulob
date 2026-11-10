@@ -99,11 +99,9 @@ entity.
 }
 \examples{
 eulob_search("Siemens Mobilty", limit = 5)
-eulob_search("Grunenthal", method = "cosine", limit = 5)
 eulob_search("association", method = "fixed", limit = 5)
 eulob_search("university", country = "UE", limit = 5)
 eulob_search("Siemens", method = "jw", limit = 5)
-eulob_search("Siemens", min_similarity = 0.5, limit = 5)
 eulob_search("zzzxxyy_no_existe_123", method = "fixed")
 
 }
