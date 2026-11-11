@@ -248,7 +248,7 @@ eulob_search_normalized <- function(
 
   ruta <- system.file(
     "extdata",
-    "eulob_normalized_candidates.rds",
+    "catalog", "eulob_normalized_candidates.rds",
     package = "eulob"
   )
 
