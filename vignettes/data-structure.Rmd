@@ -7,35 +7,22 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
+```{r, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
 # Introduction
 
-EU-LOB is a catalogue of organizations recorded in European
-lobbying registers. The eulob package provides access to a
-bundled snapshot that can be queried without internet access.
+EU-LOB is a catalogue of names and entries recorded in
+European lobbying and transparency registers.
 
-This vignette describes the structure, identifiers, coverage
-and methodological limitations of the catalogue.
+This vignette describes the package's territorial coverage,
+catalogue indexes, identifiers and methodological limitations.
 
-# Register coverage
+# Territorial and register coverage
 
-The catalogue includes 19 territorial scopes and 21 registers.
-
-| Code | Register |
-|------|----------|
-| AT | Austrian Lobbying Register |
-| CY | Cyprus Lobbying Register |
-| DE | German Lobby Register |
-| ES | Spanish CNMC Interest Groups Register |
-| FI | Finnish Transparency Register |
-| IE | Irish Register of Lobbying |
-| LT | Lithuanian Lobbyists Register |
-| RO | Romanian Lobbying Register |
-| UE | EU Transparency Register |
-
-UE represents the supranational EU register and is not an
-ISO country code.
-
-# Examine catalogue coverage
+The bundled catalogue includes 19 territorial scopes and
+21 registers.
 
 ```{r}
 library(eulob)
@@ -43,101 +30,161 @@ eulob_countries()
 eulob_registers()
 ```
 
-# Catalogue structure
+The code `UE` identifies the EU Transparency Register.
+The United Kingdom is included separately.
 
-Two RDS tables are bundled with the package.
+Historical Netherlands observations are retained in the
+upstream research data, but Netherlands entries are excluded
+from the searchable catalogue because individual entities
+could not be reliably identified.
 
-## Names catalogue
+# Catalogue size
 
-The names.rds table contains:
+The distributed catalogue contains:
 
-- name_id: identifier associated with a normalized name.
-- name_normalized: normalized representation.
-- name: recorded name.
-- n_entities: count of associated register entries.
-- n_countries: count of associated territorial codes.
+- 40,482 normalized name records.
+- 42,599 name-to-register relationships.
+- 42,265 distinct country-register-identifier entries.
+- 18,279 normalized-name candidate pairs.
+
+The first three quantities represent different indexing units.
+Candidate pairs are not additional lobbying organizations.
+
+# Internal data organization
+
+The package distributes three RDS objects in
+`inst/extdata/catalog/`.
+
+## Names index
+
+`names.rds` contains:
+
+- `name_id`
+- `name_normalized`
+- `name`
+- `n_entities`
+- `n_countries`
+
+Each row represents a normalized-name identifier.
 
 ## Name-to-register relationships
 
-The name_ids.rds table contains:
+`name_ids.rds` contains:
 
-- name_id: normalized-name identifier.
-- name_normalized: normalized name.
-- name: recorded name.
-- country: territorial or register code.
-- register: source register.
-- lobby_id: register-specific identifier.
+- `name_id`
+- `name_normalized`
+- `name`
+- `country`
+- `register`
+- `lobby_id`
 
-The current snapshot contains 40,476 name records and
-42,599 name-to-register relationships.
+These relationships link names to entries within individual
+registers and territorial scopes.
 
-# Names and registered entities
+## Normalized candidate index
 
-A normalized name is not necessarily a unique legal entity.
+`eulob_normalized_candidates.rds` supports the exploratory
+matching functionality provided by
+`eulob_search_normalized()`.
 
-Different registered entities may share the same name.
-The same organization may also appear under different names.
+It contains candidate name pairs and matching attributes,
+not an independent collection of organizations.
 
-The lobby_id field contains a register-specific identifier.
-Its format varies across sources and may include official URLs.
+# Understanding identifiers
 
-Identifiers from different registers should not be assumed
-to belong to a common identification system.
+`name_id` identifies a normalized name in the catalogue.
+It is not a harmonized European legal entity identifier.
 
-# Explore Spanish and German records
+`lobby_id` is specific to a source register. It may correspond
+to an official registration number, a source-derived key or
+another source-specific identifier.
+
+A normalized name can be associated with multiple register
+entries, and different recorded names may refer to one
+organization.
+
+# Explore catalogue relationships
 
 ```{r}
 head(eulob_lobbies(country = "ES"), 5)
 head(eulob_lobbies(country = "DE"), 5)
 ```
 
-# Interpreting counts
-
-The n_names field counts distinct name identifiers.
-
-The n_entities field counts distinct register identifiers
-within each register. At territorial level, combinations
-of register and identifier are used.
-
-These counts do not represent globally deduplicated entities.
-
-# Searching organizations
+Register-level counts can be examined with:
 
 ```{r}
-eulob_search("universidad", limit = 5)
-eulob_search("association", country = "UE", limit = 5)
+eulob_sources(country = "IT")
 ```
 
-The default search uses cosine similarity over character bigrams; literal substring matching is available with `method = "fixed"`.
-against normalized names.
+`n_names` counts distinct name identifiers.
+`n_entities` counts distinct register entries under the
+relevant register or territorial grouping.
 
-Fuzzy matching, semantic search and automatic cross-register
-entity resolution are not currently implemented.
+Neither represents globally deduplicated legal organizations.
+
+# Name searches
+
+`eulob_search()` performs direct textual searches using
+cosine similarity by default.
+
+Supported alternatives include Jaccard, Jaro-Winkler,
+Damerau-Levenshtein and literal substring search.
+
+```{r}
+head(eulob_search("association", limit = 5))
+head(eulob_search(
+  "universidad",
+  method = "fixed",
+  limit = 5
+))
+```
+
+`eulob_search_normalized()` additionally provides strict
+and exploratory retrieval through its candidate index.
+
+```{r}
+head(eulob_search_normalized(
+  "association",
+  method = "strict",
+  limit = 5
+))
+```
+
+# Shared names across registers
+
+```{r}
+head(eulob_cross_registers(
+  min_countries = 2L,
+  limit = 5L
+))
+```
+
+A shared normalized name does not demonstrate that different
+register entries belong to the same legal entity.
 
 # Methodological limitations
 
 Important considerations include:
 
-- National registers may have different inclusion criteria.
-- Register coverage and reporting obligations may vary.
-- Names may contain spelling and legal-form variations.
+- Registers may use different inclusion criteria.
+- Reporting obligations and update schedules can vary.
+- Entries may represent organizations, individuals,
+  participant names or other source-specific units.
 - Identical normalized names do not prove common identity.
-- Different identifiers may represent related organizations.
+- Different names may refer to the same organization.
+- Register counts are not direct measures of lobbying activity.
 - Absence from a register does not establish absence of lobbying.
-- Record counts are not directly comparable measures of activity.
+- Search candidates require independent interpretation.
 
-# Data provenance and reproducibility
+# Reproducibility
 
-The catalogue is distributed as local RDS data.
-
-Collection dates, source-specific licensing conditions,
-normalization procedures and catalogue version identifiers
-require further verification and documentation.
-
-Researchers should record the package version and identify
-the catalogue snapshot used in their analyses.
+The package distributes a fixed catalogue snapshot rather
+than performing live queries to institutional registers.
 
 ```{r}
 eulob_version()
 eulob_info()
 ```
+
+Researchers should report the package version, search
+parameters and selection criteria used in their analyses.

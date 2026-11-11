@@ -46,7 +46,7 @@ Use `eulob_registers()` to inspect the available registers.
 
 ## Installation
 
-Install from a local source checkout before the CRAN release:
+Before the first CRAN release, install from a local source checkout:
 
     install.packages(".", repos = NULL, type = "source")
 
@@ -78,19 +78,20 @@ Inspect package metadata:
 
 ## Main functions
 
-- eulob_countries(): territorial coverage and counts.
-- eulob_registers(): available lobbying registers.
-- eulob_lobbies(): organization names and register identifiers.
-- eulob_search(): approximate name search (cosine by default),
-  with Jaccard, Jaro-Winkler, Damerau-Levenshtein and fixed
-  substring-search options.
-- eulob_cross_registers(): find names shared across registers.
-- eulob_info(): project and package metadata.
-- eulob_version(): installed package version.
+- `eulob_countries()`: territorial coverage and counts.
+- `eulob_registers()`: available lobbying registers.
+- `eulob_sources()`: register-level catalogue counts.
+- `eulob_lobbies()`: names and register-specific identifiers.
+- `eulob_get()`: retrieve entries using a register identifier.
+- `eulob_search()`: literal and approximate name searches.
+- `eulob_search_normalized()`: normalized-name candidate retrieval.
+- `eulob_cross_registers()`: names shared across registers.
+- `eulob_info()`: package information.
+- `eulob_version()`: installed package version.
 
 ## Data structure
 
-The bundled catalogue contains 40,476 normalized name records,
+The bundled catalogue contains 40,482 normalized name records,
 42,599 name-to-register-identifier relationships and
 42,265 distinct country-register-identifier keys.
 

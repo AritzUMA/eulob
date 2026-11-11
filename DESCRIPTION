@@ -19,9 +19,13 @@ Authors@R: c(person(
         role = "ctb"
     )
     )
-Description: Provides tools for accessing and working with EU-LOB,
-    an open and incremental database of registered lobbying
-    organizations in the European Union.
+Description: Provides a bundled catalogue of lobbying organizations
+    recorded in national and European transparency registers.
+    Supports queries by country and register, retrieval of register
+    entries, identification of names occurring across registers,
+    and literal and approximate name searches. Includes normalized
+    name matching and exploratory candidate retrieval for
+    comparative research on registered interest groups.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Imports:
