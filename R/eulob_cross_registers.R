@@ -62,75 +62,70 @@ eulob_cross_registers <- function(
     }
   }
 
-  catalog <- .eulob_catalog("names", NULL)
+  catalog <- data.table::as.data.table(
+    .eulob_catalog("names", NULL)
+  )
 
-  selected <- catalog[
-    !.eulob_is_placeholder_name(catalog$name_normalized) &
-      !is.na(catalog$n_countries) &
-      catalog$n_countries >= min_countries,
-    ,
-    drop = FALSE
-  ]
+  idx <- which(
+    !.eulob_is_placeholder_name(catalog[["name_normalized"]]) &
+      !is.na(catalog[["n_countries"]]) &
+      catalog[["n_countries"]] >= min_countries
+  )
+
+  selected <- catalog[idx, ]
 
   if (!is.null(name)) {
     normalized <- tolower(trimws(name))
-
-    selected <- selected[
-      selected$name_normalized == normalized,
-      ,
-      drop = FALSE
-    ]
+    idx <- which(selected[["name_normalized"]] == normalized)
+    selected <- selected[idx, ]
   }
 
-  selected <- selected[
-    order(
-      -selected$n_countries,
-      -selected$n_entities,
-      selected$name_normalized,
-      selected$name_id
-    ),
-    ,
-    drop = FALSE
-  ]
+  # Mantener exactamente la ordenación original de R base.
+  idx <- base::order(
+    -selected[["n_countries"]],
+    -selected[["n_entities"]],
+    selected[["name_normalized"]],
+    selected[["name_id"]]
+  )
+
+  selected <- selected[idx, ]
 
   if (!is.null(limit)) {
     selected <- head(selected, as.integer(limit))
   }
 
-  ids <- .eulob_catalog("name_ids", NULL)
+  ids <- data.table::as.data.table(
+    .eulob_catalog("name_ids", NULL)
+  )
 
-  ids <- ids[
-    ids$name_id %in% selected$name_id,
-    ,
-    drop = FALSE
-  ]
+  idx <- which(ids[["name_id"]] %in% selected[["name_id"]])
+  ids <- ids[idx, ]
 
   if (nrow(ids)) {
-    ids <- ids[
-      order(
-        match(ids$name_id, selected$name_id),
-        ids$country,
-        ids$lobby_id
-      ),
-      ,
-      drop = FALSE
-    ]
+    # También conservar el orden original dentro de cada nombre.
+    idx <- base::order(
+      match(ids[["name_id"]], selected[["name_id"]]),
+      ids[["country"]],
+      ids[["lobby_id"]]
+    )
+
+    ids <- ids[idx, ]
   }
 
   metadata <- selected[
-    match(ids$name_id, selected$name_id),
+    match(ids[["name_id"]], selected[["name_id"]]),
     c("n_countries", "n_entities"),
-    drop = FALSE
+    with = FALSE
   ]
 
   result <- data.frame(
-    name_id = ids$name_id,
-    name = ids$name,
-    country = ids$country,
-    register = ids$register,
-    lobby_id = ids$lobby_id,
-    n_countries = metadata$n_countries,
-    n_entities = metadata$n_entities,
+    name_id = ids[["name_id"]],
+    name = ids[["name"]],
+    country = ids[["country"]],
+    register = ids[["register"]],
+    lobby_id = ids[["lobby_id"]],
+    n_countries = metadata[["n_countries"]],
+    n_entities = metadata[["n_entities"]],
     stringsAsFactors = FALSE
   )
 

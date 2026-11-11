@@ -25,11 +25,10 @@ Description: Provides tools for accessing and working with EU-LOB,
 License: MIT + file LICENSE
 Encoding: UTF-8
 Imports:
+    data.table,
     stringdist,
     stringi
 Suggests:
-    DBI,
-    duckdb,
     knitr,
     rmarkdown,
     testthat (>= 3.0.0)

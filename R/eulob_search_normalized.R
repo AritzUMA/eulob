@@ -136,12 +136,27 @@ eulob_search_normalized <- function(
     length(comunes) / length(todos)
   }
 
-  datos <- as.data.frame(eulob_lobbies())
+  # Reutilizar el catálogo y el orden original en caché.
+  cache <- .eulob_catalog_cache
+  cache_key <- "lobbies_dt_order"
+
+  if (!exists(cache_key, envir = cache, inherits = FALSE)) {
+    invisible(eulob_lobbies())
+  }
+
+  cached <- get(cache_key, envir = cache, inherits = FALSE)
 
   cols <- c("country", "register", "lobby_id", "name")
-  stopifnot(all(cols %in% names(datos)))
 
-  datos <- unique(datos[, cols, drop = FALSE])
+  datos <- cached$data[
+    cached$order,
+    cols,
+    with = FALSE
+  ]
+
+  # Deduplicar manteniendo la primera aparición.
+  datos <- unique(datos, by = cols)
+  datos <- as.data.frame(datos)
 
   for (col in cols) {
     datos[[col]] <- as.character(datos[[col]])
@@ -241,7 +256,22 @@ eulob_search_normalized <- function(
     stop("The normalized candidate index is missing.")
   }
 
-  indice <- readRDS(ruta)
+  cache_key <- "normalized_candidates"
+
+  if (!exists(cache_key, envir = .eulob_catalog_cache,
+              inherits = FALSE)) {
+    assign(
+      cache_key,
+      readRDS(ruta),
+      envir = .eulob_catalog_cache
+    )
+  }
+
+  indice <- get(
+    cache_key,
+    envir = .eulob_catalog_cache,
+    inherits = FALSE
+  )
 
   encontrados <- indice[
     indice$nombre_1 == q |

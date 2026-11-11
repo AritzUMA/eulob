@@ -14,6 +14,10 @@
 
 # Internal: load the catalogue bundled with the package.
 # Cache bundled catalogues lazily within the R session.
+.datatable.aware <- TRUE
+
+utils::globalVariables(c(".SD", "name_id", "lobby_id"))
+
 .eulob_catalog_cache <- new.env(parent = emptyenv())
 
 .eulob_catalog <- function(table, data_dir = NULL) {
@@ -101,23 +105,29 @@
 #' @export
 eulob_countries <- function(data_dir = NULL) {
   x <- .eulob_catalog("name_ids", data_dir)
+  dt <- data.table::as.data.table(x)
 
-  countries <- sort(unique(x$country))
+  grouped <- dt[
+    ,
+    list(
+      n_names = data.table::uniqueN(name_id),
+      n_entities = data.table::uniqueN(.SD)
+    ),
+    by = "country",
+    .SDcols = c("register", "lobby_id")
+  ]
 
-  result <- do.call(rbind, lapply(countries, function(cc) {
-    y <- x[x$country == cc, , drop = FALSE]
+  grouped <- grouped[order(grouped[["country"]]), ]
 
-    data.frame(
-      country = cc,
-      n_names = length(unique(y$name_id)),
-      n_entities = nrow(unique(
-        y[c("register", "lobby_id")]
-      ))
-    )
-  }))
+  out <- data.frame(
+    country = grouped[["country"]],
+    n_names = grouped[["n_names"]],
+    n_entities = grouped[["n_entities"]],
+    stringsAsFactors = FALSE
+  )
 
-  rownames(result) <- NULL
-  result
+  rownames(out) <- NULL
+  out
 }
 
 #' List Lobbying Registers in EU-LOB
@@ -155,43 +165,40 @@ eulob_countries <- function(data_dir = NULL) {
 #'
 #' @seealso [eulob_countries()], [eulob_lobbies()]
 #' @export
-eulob_registers <- function(country = NULL, data_dir = NULL) {
+eulob_registers <- function(country = NULL,
+                            data_dir = NULL) {
   x <- .eulob_catalog("name_ids", data_dir)
   country <- .eulob_country(country)
 
+  dt <- data.table::as.data.table(x)
+
   if (!is.null(country)) {
-    x <- x[x$country == country, , drop = FALSE]
+    idx <- which(dt[["country"]] == country)
+    dt <- dt[idx, ]
   }
 
-  keys <- unique(x[c("country", "register")])
-  keys <- keys[order(keys$country, keys$register), , drop = FALSE]
+  grouped <- dt[
+    ,
+    list(
+      n_names = data.table::uniqueN(name_id),
+      n_entities = data.table::uniqueN(lobby_id)
+    ),
+    by = c("country", "register")
+  ]
 
-  result <- lapply(seq_len(nrow(keys)), function(i) {
-    y <- x[
-      x$country == keys$country[i] &
-      x$register == keys$register[i],
-      ,
-      drop = FALSE
-    ]
+  grouped <- grouped[
+    order(grouped[["country"]], grouped[["register"]]),
+    ,
+  ]
 
-    data.frame(
-      country = keys$country[i],
-      register = keys$register[i],
-      n_names = length(unique(y$name_id)),
-      n_entities = length(unique(y$lobby_id))
-    )
-  })
+  out <- data.frame(
+    country = grouped[["country"]],
+    register = grouped[["register"]],
+    n_names = grouped[["n_names"]],
+    n_entities = grouped[["n_entities"]],
+    stringsAsFactors = FALSE
+  )
 
-  if (!length(result)) {
-    return(data.frame(
-      country = character(),
-      register = character(),
-      n_names = integer(),
-      n_entities = integer()
-    ))
-  }
-
-  out <- do.call(rbind, result)
   rownames(out) <- NULL
   out
 }
@@ -248,10 +255,6 @@ eulob_lobbies <- function(country = NULL, register = NULL,
   x <- .eulob_catalog("name_ids", data_dir)
   country <- .eulob_country(country)
 
-  if (!is.null(country)) {
-    x <- x[x$country == country, , drop = FALSE]
-  }
-
   if (!is.null(register)) {
     if (!is.character(register) ||
         length(register) != 1L ||
@@ -260,18 +263,59 @@ eulob_lobbies <- function(country = NULL, register = NULL,
       stop("register must be a non-empty character string.",
            call. = FALSE)
     }
-    x <- x[x$register == register, , drop = FALSE]
   }
 
-  x <- x[
-    order(x$name_normalized, x$country, x$lobby_id),
-    c("name_id", "name", "name_normalized",
-      "country", "register", "lobby_id"),
-    drop = FALSE
-  ]
+  cache_key <- "lobbies_dt_order"
 
-  rownames(x) <- NULL
-  x
+  if (!exists(cache_key, envir = .eulob_catalog_cache,
+              inherits = FALSE)) {
+    cached <- list(
+      data = data.table::as.data.table(x),
+      order = order(
+        x$name_normalized,
+        x$country,
+        x$lobby_id
+      )
+    )
+
+    assign(cache_key, cached, envir = .eulob_catalog_cache)
+  }
+
+  cached <- get(
+    cache_key,
+    envir = .eulob_catalog_cache,
+    inherits = FALSE
+  )
+
+  dt <- cached$data
+  positions <- cached$order
+
+  if (!is.null(country)) {
+    positions <- positions[
+      dt[["country"]][positions] == country
+    ]
+  }
+
+  if (!is.null(register)) {
+    positions <- positions[
+      dt[["register"]][positions] == register
+    ]
+  }
+
+  cols <- c(
+    "name_id", "name", "name_normalized",
+    "country", "register", "lobby_id"
+  )
+
+  result <- as.data.frame(
+    dt[positions, cols, with = FALSE]
+  )
+
+  attr(result, "datalabel") <- NULL
+  attr(result, "var.labels") <- NULL
+  rownames(result) <- NULL
+
+  result
 }
 
 #' Search Lobbying Organization Names
@@ -427,20 +471,23 @@ eulob_search <- function(query, country = NULL,
          call. = FALSE)
   }
 
-  x <- .eulob_catalog("name_ids", data_dir)
+  x <- data.table::as.data.table(
+    .eulob_catalog("name_ids", data_dir)
+  )
   country <- .eulob_country(country)
 
   if (!is.null(country)) {
-    x <- x[x$country == country, , drop = FALSE]
+    # Calcular fuera de DT[] para evitar colisiones de nombres.
+    idx <- which(x[["country"]] == country)
+    x <- x[idx, ]
   }
 
   # Exclude missing-name markers from searchable results.
   # The source records remain available through eulob_lobbies().
-  x <- x[
-    !.eulob_is_placeholder_name(x$name_normalized),
-    ,
-    drop = FALSE
-  ]
+  idx <- which(
+    !.eulob_is_placeholder_name(x[["name_normalized"]])
+  )
+  x <- x[idx, ]
 
   # Mantener intacta la búsqueda original.
   if (method == "fixed") {
@@ -451,13 +498,21 @@ eulob_search <- function(query, country = NULL,
       fixed = TRUE
     )
 
-    x <- x[matches, , drop = FALSE]
+    x <- x[which(matches), ]
 
-    x <- x[
-      order(x$name_normalized, x$country, x$lobby_id),
-      c("name_id", "name", "country", "register", "lobby_id"),
-      drop = FALSE
-    ]
+    idx <- base::order(
+      x[["name_normalized"]],
+      x[["country"]],
+      x[["lobby_id"]]
+    )
+
+    cols <- c(
+      "name_id", "name", "country", "register", "lobby_id"
+    )
+
+    x <- as.data.frame(x[idx, cols, with = FALSE])
+    attr(x, "datalabel") <- NULL
+    attr(x, "var.labels") <- NULL
 
     x <- head(x, as.integer(limit))
     rownames(x) <- NULL
@@ -502,31 +557,28 @@ eulob_search <- function(query, country = NULL,
   ]
 
   if (!is.null(min_similarity)) {
-    x <- x[
-      !is.na(x$similarity) &
-        x$similarity >= min_similarity,
-      ,
-      drop = FALSE
-    ]
+    idx <- which(
+      !is.na(x[["similarity"]]) &
+        x[["similarity"]] >= min_similarity
+    )
+    x <- x[idx, ]
   }
 
-  x <- x[
-    order(
-      -x$similarity,
-      x$name_normalized,
-      x$country,
-      x$lobby_id
-    ),
-    c(
-      "name_id",
-      "name",
-      "country",
-      "register",
-      "lobby_id",
-      "similarity"
-    ),
-    drop = FALSE
-  ]
+  idx <- base::order(
+    -x[["similarity"]],
+    x[["name_normalized"]],
+    x[["country"]],
+    x[["lobby_id"]]
+  )
+
+  cols <- c(
+    "name_id", "name", "country",
+    "register", "lobby_id", "similarity"
+  )
+
+  x <- as.data.frame(x[idx, cols, with = FALSE])
+  attr(x, "datalabel") <- NULL
+  attr(x, "var.labels") <- NULL
 
   x <- head(x, as.integer(limit))
   rownames(x) <- NULL
