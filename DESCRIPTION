@@ -19,13 +19,17 @@ Authors@R: c(person(
         role = "ctb"
     )
     )
-Description: Provides a bundled catalogue of lobbying organizations
-    recorded in national and European transparency registers.
-    Supports queries by country and register, retrieval of register
-    entries, identification of names occurring across registers,
-    and literal and approximate name searches. Includes normalized
-    name matching and exploratory candidate retrieval for
-    comparative research on registered interest groups.
+Description: An R package for exploring and analysing lobbying organisations
+    across Europe through EU-LOB, an open and continuously expanding database.
+    It brings together organisations identified through their registration in
+    lobbying or transparency registers, or through publicly documented
+    meetings with institutional representatives, at European, national, and
+    regional levels. The package enables researchers to search, identify, and
+    compare organisations across different sources and jurisdictions. It
+    incorporates exact and approximate name-matching methods, including cosine
+    similarity, Jaccard similarity, Jaro-Winkler distance, and q-gram-based
+    comparisons, to identify potentially matching organisations despite
+    variations in names or spelling.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Imports:

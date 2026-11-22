@@ -2,12 +2,18 @@
 
 # eulob
 
-**eulob** is an R package for accessing and exploring EU-LOB,
-an open and incremental database of registered lobbying
-organizations in the European Union.
+**eulob** is an R package for exploring lobbying organisations
+across Europe through **EU-LOB**, an open and continuously expanding
+database. It brings together records from the European Union
+Transparency Register, national and regional lobbying and transparency
+registers, and publicly documented meetings with institutional
+representatives.
 
-The package includes a local catalogue that can be queried
-without an internet connection.
+The package provides tools to search, retrieve, and compare
+organisations across different sources and jurisdictions.
+Its exact and approximate name-matching methods help identify
+potential correspondences between records despite differences
+in naming conventions or spelling.
 
 ## Available lobbying registers
 
