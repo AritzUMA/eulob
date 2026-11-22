@@ -4,7 +4,11 @@
 [![CRAN](https://img.shields.io/cran/v/eulob?label=CRAN)](https://cran.r-project.org/package=eulob)
 [![Development version](https://img.shields.io/github/r-package/v/AritzUMA/eulob?label=development)](https://github.com/AritzUMA/eulob)
 [![R-CMD-check](https://github.com/AritzUMA/eulob/actions/workflows/R-CMD-check.yaml/badge.svg?branch=main)](https://github.com/AritzUMA/eulob/actions/workflows/R-CMD-check.yaml)
+[![Downloads](https://cranlogs.r-pkg.org/badges/last-month/eulob)](https://cran.r-project.org/package=eulob)
+[![Total Downloads](https://cranlogs.r-pkg.org/badges/grand-total/eulob?color=orange)](https://cran.r-project.org/package=eulob)
 <!-- badges: end -->
+
+<br>
 
 ## Overview
 
