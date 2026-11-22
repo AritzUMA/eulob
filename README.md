@@ -1,9 +1,9 @@
-<img src="man/figures/logo_readme.png" alt="eulob logo" class="glfm-float-right" width="140">
-
-# eulob
+# eulob <img src="man/figures/logo_readme.png" alt="eulob logo" class="glfm-float-right" align="right" width="140">
 
 <!-- badges: start -->
-[![CRAN status](https://www.r-pkg.org/badges/version/eulob)](https://cran.r-project.org/package=eulob)
+[![CRAN](https://img.shields.io/cran/v/eulob?label=CRAN)](https://cran.r-project.org/package=eulob)
+[![Development version](https://img.shields.io/github/r-package/v/AritzUMA/eulob?label=development)](https://github.com/AritzUMA/eulob)
+[![R-CMD-check](https://github.com/AritzUMA/eulob/actions/workflows/R-CMD-check.yaml/badge.svg?branch=main)](https://github.com/AritzUMA/eulob/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
 ## Overview
