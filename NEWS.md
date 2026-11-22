@@ -1,3 +1,21 @@
+# eulob 0.2.1.9000 (development version)
+
+## Documentation
+
+- Improved the package description and README to clarify
+  EU-LOB's scope, data sources and name-matching capabilities.
+- Added the eulob hex sticker and improved its presentation.
+- Added a dynamic CRAN version badge.
+- Prepared a pkgdown documentation website with function
+  references, tutorials, search and favicons.
+
+## Development infrastructure
+
+- Added GitHub Actions workflows for multi-platform R CMD check
+  and automated test coverage.
+- Prepared installation of the development version from GitHub.
+
+
 # eulob 0.2.0
 
 ## New features

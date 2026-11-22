@@ -64,6 +64,18 @@ Before the first CRAN release, install from a local source checkout:
 
     install.packages(".", repos = NULL, type = "source")
 
+### Development version (GitHub)
+
+The latest development version is available on GitHub:
+
+~~r
+install.packages("pak")
+pak::pak("AritzUMA/eulob")
+~~
+
+This version may contain changes that are not yet available
+in a CRAN release.
+
 ## Getting started
 
 Load the package:

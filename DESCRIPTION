@@ -1,6 +1,6 @@
 Package: eulob
 Title: European Union Lobbying Organizations Database
-Version: 0.2.1
+Version: 0.2.1.9000
 Depends: R (>= 3.5.0)
 Authors@R: c(person(
     given = "Aritz",
