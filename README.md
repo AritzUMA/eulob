@@ -1,4 +1,4 @@
-<img src="man/figures/logo.png" alt="eulob logo" class="glfm-float-right" align="right" width="180">
+<img src="man/figures/logo_readme.png" alt="eulob logo" class="glfm-float-right" align="right" width="180">
 
 # eulob
 
