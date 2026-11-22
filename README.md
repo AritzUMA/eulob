@@ -65,8 +65,12 @@ Use `eulob_registers()` to inspect the available registers.
 The development version of `eulob` is available from GitHub:
 
 ```r
-install.packages("pak")
-pak::pak("AritzUMA/eulob")
+install.packages("remotes")
+remotes::install_github(
+  "AritzUMA/eulob",
+  build = FALSE,
+  upgrade = "never"
+)
 ```
 
 To check the installed version:
