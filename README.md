@@ -1,3 +1,5 @@
+<img src="man/figures/logo.png" align="right" width="180" alt="eulob logo">
+
 # eulob
 
 **eulob** is an R package for accessing and exploring EU-LOB,
