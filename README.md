@@ -1,6 +1,12 @@
-<img src="man/figures/logo_readme.png" alt="eulob logo" class="glfm-float-right" align="right" width="180">
+<img src="man/figures/logo_readme.png" alt="eulob logo" class="glfm-float-right" width="140">
 
 # eulob
+
+<!-- badges: start -->
+[![CRAN status](https://www.r-pkg.org/badges/version/eulob)](https://cran.r-project.org/package=eulob)
+<!-- badges: end -->
+
+## Overview
 
 **eulob** is an R package for exploring lobbying organisations
 across Europe through **EU-LOB**, an open and continuously expanding

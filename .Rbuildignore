@@ -3,3 +3,7 @@
 ^.*[.]tar[.]gz$
 ^DESCRIPTION[.]backup_cran$
 ^scripts$
+^_pkgdown[.]yml$
+^docs$
+^pkgdown$
+^[.]github$
