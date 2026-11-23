@@ -327,3 +327,82 @@ testthat::test_that("test-search-unicode.R", {
     cat("OK: normalización Unicode coherente\n")
   })
 })
+
+testthat::test_that("normalized search finds Microsoft", {
+  result <- eulob_search_normalized(
+    "Microsoft",
+    method = "strict",
+    limit = 10L
+  )
+
+  testthat::expect_s3_class(result, "data.frame")
+  testthat::expect_gt(nrow(result), 0L)
+
+  testthat::expect_true(all(
+    c(
+      "name", "country", "register",
+      "match_type", "similarity"
+    ) %in% names(result)
+  ))
+
+  testthat::expect_true(any(
+    result$name == "Microsoft" &
+      result$country == "BE"
+  ))
+
+  testthat::expect_true(any(
+    result$name == "Microsoft" &
+      result$country == "EE"
+  ))
+
+  testthat::expect_true(all(
+    result$similarity >= 0 &
+      result$similarity <= 1
+  ))
+})
+
+testthat::test_that("normalized search supports all modes", {
+  for (mode in c("strict", "exploratory", "both")) {
+    result <- eulob_search_normalized(
+      "Microsoft",
+      method = mode,
+      limit = 10L
+    )
+
+    testthat::expect_s3_class(
+      result,
+      "data.frame"
+    )
+
+    testthat::expect_true(
+      all(c("name", "country", "register") %in%
+          names(result)),
+      info = mode
+    )
+  }
+})
+
+testthat::test_that("normalized search supports candidate filters", {
+  for (filter in c("focused", "all")) {
+    result <- eulob_search_normalized(
+      "Microsoft Corporation",
+      method = "both",
+      candidate_filter = filter,
+      limit = 10L
+    )
+
+    testthat::expect_s3_class(
+      result,
+      "data.frame"
+    )
+  }
+})
+
+testthat::test_that("normalized search rejects invalid methods", {
+  testthat::expect_error(
+    eulob_search_normalized(
+      "Microsoft",
+      method = "invalid_method"
+    )
+  )
+})

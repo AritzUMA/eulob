@@ -262,3 +262,67 @@ testthat::test_that("eulob_sources", {
     nrow(eulob_registers(country = "IT"))
   )
 })
+
+testthat::test_that("eulob_get retrieves Microsoft registrations", {
+  hits <- eulob_search(
+    "Microsoft",
+    method = "fixed",
+    limit = 100L
+  )
+
+  selected <- hits[
+    hits$country == "UE" &
+      hits$name == "Microsoft Corporation",
+    ,
+    drop = FALSE
+  ]
+
+  testthat::expect_gt(nrow(selected), 0L)
+
+  entry <- selected[1L, ]
+
+  result <- eulob_get(
+    country = entry$country,
+    lobby_id = entry$lobby_id,
+    register = entry$register
+  )
+
+  testthat::expect_s3_class(result, "data.frame")
+  testthat::expect_gt(nrow(result), 0L)
+
+  testthat::expect_true(
+    all(result$country == entry$country)
+  )
+
+  testthat::expect_true(
+    all(result$register == entry$register)
+  )
+
+  testthat::expect_true(
+    all(result$lobby_id == entry$lobby_id)
+  )
+})
+
+testthat::test_that("eulob_get preserves leading zeros", {
+  result <- eulob_get(
+    country = "PL",
+    lobby_id = "00651",
+    register = "Polish Professional Lobbying Register"
+  )
+
+  testthat::expect_gt(nrow(result), 0L)
+  testthat::expect_true(
+    all(result$lobby_id == "00651")
+  )
+})
+
+testthat::test_that("eulob_get handles unknown identifiers", {
+  result <- eulob_get(
+    country = "UE",
+    lobby_id = "__EULOB_TEST_NONEXISTENT__",
+    register = "EU Transparency Register"
+  )
+
+  testthat::expect_s3_class(result, "data.frame")
+  testthat::expect_equal(nrow(result), 0L)
+})
