@@ -6,6 +6,7 @@
 [![R-CMD-check](https://github.com/AritzUMA/eulob/actions/workflows/R-CMD-check.yaml/badge.svg?branch=main)](https://github.com/AritzUMA/eulob/actions/workflows/R-CMD-check.yaml)
 [![Downloads](https://cranlogs.r-pkg.org/badges/last-month/eulob)](https://cran.r-project.org/package=eulob)
 [![Total Downloads](https://cranlogs.r-pkg.org/badges/grand-total/eulob?color=orange)](https://cran.r-project.org/package=eulob)
+[![Codecov](https://codecov.io/gh/AritzUMA/eulob/branch/main/graph/badge.svg)](https://codecov.io/gh/AritzUMA/eulob)
 <!-- badges: end -->
 
 <br>
