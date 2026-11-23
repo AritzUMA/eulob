@@ -7,163 +7,226 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include=FALSE}
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = FALSE,
+  comment = "#>",
+  message = FALSE,
+  warning = FALSE
+)
 ```
 
 # Introduction
 
-`eulob` provides offline access to EU-LOB, a catalogue of names
-and entries from European lobbying and transparency registers.
+`eulob` provides offline access to **EU-LOB**, a catalogue of names and registration entries collected from European lobbying and transparency registers. The package allows researchers to explore register coverage, search recorded organization names, retrieve individual entries, and examine names appearing across different registers.
 
-The catalogue contains 19 territorial scopes and 21 registers.
-Its entries should not automatically be interpreted as unique
-legal organizations.
+The catalogue currently covers **19 territorial scopes and 21 registers**, including the EU Transparency Register. The territorial code `UE` identifies the supranational EU register.
 
-# Load the package
+This guide follows a practical example using **Microsoft**, whose name appears in several European lobbying registers. We begin by exploring the catalogue, then search for recorded names, examine individual registrations, and compare results across registers.
 
-```{r}
+# Installation and first steps
+
+The development version of `eulob` is publicly available on GitHub:
+
+```{r installation, eval=FALSE}
+install.packages("remotes")
+remotes::install_github(
+  "AritzUMA/eulob",
+  build = FALSE,
+  upgrade = "never"
+)
+```
+
+Load the package and check the installed version:
+
+```{r load}
 library(eulob)
+
 eulob_version()
 ```
 
-# Explore countries and registers
+The package includes its catalogue locally, so ordinary queries do not require an internet connection.
 
-List territorial coverage and available registers.
+# Explore the catalogue
 
-```{r}
-head(eulob_countries())
-head(eulob_registers())
+Before searching for organizations, we can inspect the territorial and institutional coverage of EU-LOB.
+
+The functions `eulob_countries()` and `eulob_registers()` provide an overview of the available territories and registers. For example, Italy has several registers included in the catalogue:
+
+```{r registers}
+italian_registers <- eulob_registers(country = "IT")
+
+knitr::kable(
+  italian_registers[, c("register", "n_names", "n_entities")],
+  caption = "Lobbying registers represented in Italy"
+)
 ```
 
-The code `UE` represents the supranational EU Transparency
-Register and is not an ISO country code.
+The `n_names` column counts distinct normalized-name identifiers, whereas `n_entities` counts distinct register-entry identifiers. Neither measure should be interpreted as a verified count of unique legal organizations.
 
-Filter the catalogue by country:
+To retrieve the names and identifiers recorded in a particular territorial scope, use `eulob_lobbies()`. For example, we can inspect the Microsoft entry in the Belgian catalogue:
 
-```{r}
-eulob_registers(country = "IT")
-eulob_sources(country = "ES")
+```{r lobbies}
+belgian_entries <- eulob_lobbies(country = "BE")
+
+belgian_microsoft <- belgian_entries[
+  grepl("Microsoft", belgian_entries$name, ignore.case = TRUE),
+  c("name", "country", "register"),
+  drop = FALSE
+]
+
+knitr::kable(
+  belgian_microsoft,
+  caption = "Microsoft entries recorded in Belgium"
+)
 ```
 
-`eulob_sources()` reports register-level counts using the
-existing catalogue indexes.
+The related function `eulob_sources()` can also be used to filter the register inventory and select its available columns.
 
-# Retrieve lobbying register entries
+# Search for Microsoft
 
-`eulob_lobbies()` returns names and identifiers from the
-selected territorial scope or register.
+One of the main features of `eulob` is the ability to search recorded organization names across European lobbying registers.
 
-```{r}
-spanish <- eulob_lobbies(country = "ES")
-head(spanish, 5)
+By default, `eulob_search()` uses cosine similarity over character bigrams. This allows a search to retrieve names that are not identical to the query.
+
+We can search for Microsoft using a minimum lexical similarity of 0.50:
+
+```{r microsoft-search}
+microsoft <- eulob_search(
+  "Microsoft",
+  method = "cosine",
+  min_similarity = 0.50,
+  limit = 15
+)
+
+knitr::kable(
+  microsoft[, c("name", "country", "register", "similarity")],
+  digits = 3,
+  caption = "Names matching Microsoft across European registers"
+)
 ```
 
-An individual entry can be retrieved by its source-specific
-identifier:
+The results include several recorded variants, such as *Microsoft Corporation*, *Microsoft Deutschland GmbH*, *Microsoft France*, and *Microsoft Oy*.
 
-```{r}
-if (nrow(spanish) > 0L) {
-  entry <- spanish[1L, ]
-  head(eulob_get(
-    country = entry$country,
-    lobby_id = entry$lobby_id,
-    register = entry$register
-  ))
+The `similarity` column measures lexical resemblance to the search term. It does not measure the probability that two records represent the same legal organization.
+
+For a case-insensitive literal substring search, use `method = "fixed"`:
+
+```{r microsoft-fixed}
+literal <- eulob_search(
+  "Microsoft",
+  method = "fixed",
+  limit = 20
+)
+
+knitr::kable(
+  head(literal[, c("name", "country"), drop = FALSE], 5),
+  caption = "Examples of literal Microsoft matches"
+)
+```
+
+Unlike approximate matching, literal searching returns names containing the requested text and does not calculate a similarity score.
+
+Other supported approximate methods include Jaccard, Jaro-Winkler, and Damerau-Levenshtein. Their parameters and differences are documented in `eulob_search()`.
+
+# Compare Microsoft across registers
+
+Searching for similar names is useful for discovering potential correspondences, but comparing names across registers requires additional care.
+
+## Normalized-name matching
+
+The function `eulob_search_normalized()` searches a separate index of nominal candidates. Its `strict` mode includes exact normalized-name matches and conservative candidate relationships.
+
+```{r microsoft-normalized}
+normalized <- eulob_search_normalized(
+  "Microsoft",
+  method = "strict",
+  limit = 10
+)
+
+knitr::kable(
+  normalized[, c(
+    "name", "country", "match_type", "similarity"
+  )],
+  digits = 3,
+  caption = "Strict normalized-name matches for Microsoft"
+)
+```
+
+In the current catalogue, the exact normalized name *Microsoft* occurs in the Belgian and Estonian registers.
+
+The function also supports `exploratory` and `both` modes for broader candidate discovery. These modes expose potential matches for further examination rather than establishing legal identity.
+
+## Shared names across territorial scopes
+
+To find normalized names appearing in more than one territorial scope, use `eulob_cross_registers()`:
+
+```{r microsoft-cross}
+shared <- eulob_cross_registers(
+  name = "Microsoft",
+  min_countries = 2L,
+  limit = 10L
+)
+
+knitr::kable(
+  shared[, c(
+    "name", "country", "register", "n_countries"
+  )],
+  caption = "The normalized name Microsoft across registers"
+)
+```
+
+These results show that the same normalized name occurs in multiple register entries. This is useful for comparative research, but it does not establish that the records refer to a single legally verified entity.
+
+Notice that *Microsoft Corporation* and *Microsoft Deutschland GmbH* are separate recorded names. They can appear in a broad search for Microsoft without necessarily being grouped together by exact normalized-name matching.
+
+## Retrieve an individual registration
+
+Once a relevant record has been identified, `eulob_get()` retrieves its catalogue entry using the territorial code and register-specific identifier.
+
+For example, we can retrieve the Microsoft Corporation entry recorded in the EU Transparency Register:
+
+```{r microsoft-get}
+eu_entry <- literal[
+  literal$country == "UE" &
+    literal$name == "Microsoft Corporation",
+  ,
+  drop = FALSE
+]
+
+if (nrow(eu_entry) > 0L) {
+  record <- eulob_get(
+    country = eu_entry$country[1],
+    lobby_id = eu_entry$lobby_id[1],
+    register = eu_entry$register[1]
+  )
+
+  knitr::kable(
+    record[, c("name", "country", "register", "lobby_id")],
+    caption = "Microsoft Corporation in the EU Transparency Register"
+  )
 }
 ```
 
-# Search for organization names
+The `lobby_id` identifies a record within its source register. Depending on the register, it may be an official identifier, a source-derived identifier, or a URL.
 
-The default search uses cosine similarity over character
-bigrams:
+# Interpretation and reproducibility
 
-```{r}
-head(eulob_search("association", limit = 5))
-head(eulob_search("universidad", country = "ES", limit = 5))
-```
+The catalogue provides a structured way to search and compare registered names, but its identifiers represent different concepts:
 
-For case-insensitive literal substring matching, select
-`method = "fixed"`:
+- `name` is the name recorded in the source.
+- `name_normalized` is the normalized textual representation.
+- `name_id` identifies a normalized name within the catalogue.
+- `country` identifies the territorial or supranational scope.
+- `register` identifies the source register.
+- `lobby_id` identifies a record within that register.
 
-```{r}
-head(eulob_search(
-  "universidad",
-  method = "fixed",
-  limit = 5
-))
-```
+**Matching names do not automatically establish legal-entity equivalence.** Two records may have similar names without referring to the same legal organization, and different names may be associated with related organizations.
 
-Additional approximate name-search methods include Jaccard,
-Jaro-Winkler and Damerau-Levenshtein.
+For reproducible research, report the installed package version, search method, similarity threshold, filters, and territorial coverage used in the analysis.
 
-These methods compare text, not semantic representations or
-verified legal identities.
+The installed version can be obtained with `eulob_version()`, while `eulob_info()` provides additional package information.
 
-# Search normalized-name candidates
+For a more detailed explanation of the catalogue, its indexing structure, and methodological limitations, consult [Understanding the EU-LOB Catalogue](https://eulob.lobbyresearch.org/articles/data-structure.html).
 
-`eulob_search_normalized()` searches a separate bundled
-candidate index.
-
-It supports three modes:
-
-- `strict`: strict normalized-name candidates.
-- `exploratory`: exploratory candidate matching.
-- `both`: both candidate categories.
-
-```{r}
-head(eulob_search_normalized(
-  "association",
-  method = "strict",
-  limit = 5
-))
-```
-
-Candidate results are intended to assist manual assessment.
-They are not evidence of verified legal identity.
-
-# Find shared names across registers
-
-`eulob_cross_registers()` identifies names appearing across
-multiple territorial scopes.
-
-```{r}
-head(eulob_cross_registers(
-  min_countries = 2L,
-  limit = 5L
-))
-```
-
-Names appearing in several registers are not necessarily
-the same legal organization.
-
-# Understand identifiers
-
-The catalogue distinguishes:
-
-- `name_id`: identifier for a normalized name.
-- `name_normalized`: normalized name representation.
-- `name`: recorded name.
-- `country`: territorial or supranational scope.
-- `register`: source register.
-- `lobby_id`: register-specific identifier.
-
-Some register identifiers originate from official registration
-systems; others are derived from source records.
-
-Identifiers should always be interpreted within their
-corresponding register.
-
-# Reproducibility
-
-The bundled catalogue can be queried without an internet
-connection. Record the package version, search methods and
-filters used in any analysis.
-
-```{r}
-eulob_info()
-eulob_version()
-```
-
-For details on the indexing structure and methodological
-limitations, see *Understanding the EU-LOB Catalogue*.
+For complete function arguments and return values, see the package's **Reference** section.
