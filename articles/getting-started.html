@@ -71,321 +71,464 @@
 <div class="section level2">
 <h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
 </h2>
-<p><code>eulob</code> provides offline access to EU-LOB, a catalogue of
-names and entries from European lobbying and transparency registers.</p>
-<p>The catalogue contains 19 territorial scopes and 21 registers. Its
-entries should not automatically be interpreted as unique legal
-organizations.</p>
+<p><code>eulob</code> provides offline access to
+<strong>EU-LOB</strong>, a catalogue of names and registration entries
+collected from European lobbying and transparency registers. The package
+allows researchers to explore register coverage, search recorded
+organization names, retrieve individual entries, and examine names
+appearing across different registers.</p>
+<p>The catalogue currently covers <strong>19 territorial scopes and 21
+registers</strong>, including the EU Transparency Register. The
+territorial code <code>UE</code> identifies the supranational EU
+register.</p>
+<p>This guide follows a practical example using
+<strong>Microsoft</strong>, whose name appears in several European
+lobbying registers. We begin by exploring the catalogue, then search for
+recorded names, examine individual registrations, and compare results
+across registers.</p>
 </div>
 <div class="section level2">
-<h2 id="load-the-package">Load the package<a class="anchor" aria-label="anchor" href="#load-the-package"></a>
+<h2 id="installation-and-first-steps">Installation and first steps<a class="anchor" aria-label="anchor" href="#installation-and-first-steps"></a>
 </h2>
+<p>The development version of <code>eulob</code> is publicly available
+on GitHub:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">eulob</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/eulob_version.html">eulob_version</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] '0.2.1.9000'</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="explore-countries-and-registers">Explore countries and registers<a class="anchor" aria-label="anchor" href="#explore-countries-and-registers"></a>
-</h2>
-<p>List territorial coverage and available registers.</p>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"remotes"</span><span class="op">)</span></span>
+<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span></span>
+<span>  <span class="st">"AritzUMA/eulob"</span>,</span>
+<span>  build <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  upgrade <span class="op">=</span> <span class="st">"never"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>Load the package and check the installed version:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/eulob_countries.html">eulob_countries</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   country n_names n_entities</span></span>
-<span><span class="co">#&gt; 1      AT     499        487</span></span>
-<span><span class="co">#&gt; 2      BE     194        194</span></span>
-<span><span class="co">#&gt; 3      CY     384        382</span></span>
-<span><span class="co">#&gt; 4      CZ     134        134</span></span>
-<span><span class="co">#&gt; 5      DE    7359       7181</span></span>
-<span><span class="co">#&gt; 6      EE    2643       2643</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/eulob_registers.html">eulob_registers</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   country                       register n_names n_entities</span></span>
-<span><span class="co">#&gt; 1      AT     Austrian Lobbying Register     499        487</span></span>
-<span><span class="co">#&gt; 2      BE Belgian Chamber Lobby Register     194        194</span></span>
-<span><span class="co">#&gt; 3      CY       Cyprus Lobbying Register     384        382</span></span>
-<span><span class="co">#&gt; 4      CZ                    Czech RELOB     134        134</span></span>
-<span><span class="co">#&gt; 5      DE          German Lobby Register    7359       7181</span></span>
-<span><span class="co">#&gt; 6      EE        Estonian Lobby Meetings    2643       2643</span></span></code></pre></div>
-<p>The code <code>UE</code> represents the supranational EU Transparency
-Register and is not an ISO country code.</p>
-<p>Filter the catalogue by country:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/eulob_registers.html">eulob_registers</a></span><span class="op">(</span>country <span class="op">=</span> <span class="st">"IT"</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   country                         register n_names n_entities</span></span>
-<span><span class="co">#&gt; 1      IT              Camera dei Deputati     455        455</span></span>
-<span><span class="co">#&gt; 2      IT           Italian MIMIT Register     754        752</span></span>
-<span><span class="co">#&gt; 3      IT Tuscany Interest Groups Register     139        139</span></span>
-<span><span class="fu"><a href="../reference/eulob_sources.html">eulob_sources</a></span><span class="op">(</span>country <span class="op">=</span> <span class="st">"ES"</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   country                              register n_names n_entities</span></span>
-<span><span class="co">#&gt; 1      ES Spanish CNMC Interest Groups Register     622        621</span></span></code></pre></div>
-<p><code><a href="../reference/eulob_sources.html">eulob_sources()</a></code> reports register-level counts using the
-existing catalogue indexes.</p>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">eulob</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/eulob_version.html">eulob_version</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">#&gt; [1] '0.2.1.9000'</span></span></code></pre>
+<p>The package includes its catalogue locally, so ordinary queries do
+not require an internet connection.</p>
 </div>
 <div class="section level2">
-<h2 id="retrieve-lobbying-register-entries">Retrieve lobbying register entries<a class="anchor" aria-label="anchor" href="#retrieve-lobbying-register-entries"></a>
+<h2 id="explore-the-catalogue">Explore the catalogue<a class="anchor" aria-label="anchor" href="#explore-the-catalogue"></a>
 </h2>
-<p><code><a href="../reference/eulob_lobbies.html">eulob_lobbies()</a></code> returns names and identifiers from the
-selected territorial scope or register.</p>
+<p>Before searching for organizations, we can inspect the territorial
+and institutional coverage of EU-LOB.</p>
+<p>The functions <code><a href="../reference/eulob_countries.html">eulob_countries()</a></code> and
+<code><a href="../reference/eulob_registers.html">eulob_registers()</a></code> provide an overview of the available
+territories and registers. For example, Italy has several registers
+included in the catalogue:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">spanish</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/eulob_lobbies.html">eulob_lobbies</a></span><span class="op">(</span>country <span class="op">=</span> <span class="st">"ES"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">spanish</span>, <span class="fl">5</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                                                            name_id</span></span>
-<span><span class="co">#&gt; 1 0adc32d5cc1bcec043fd3530e8e59cdce829e6e171a5b301e21b644e5ba0ee8b</span></span>
-<span><span class="co">#&gt; 2 937b5357beacf0c4ba17cc69b272b7115c6247c5168bbfc517a9956051b0a558</span></span>
-<span><span class="co">#&gt; 3 3d87ee70c21c618d8c36d3c9dd3e85bcb98c378fcf7e36b588241c237f75c779</span></span>
-<span><span class="co">#&gt; 4 d4895baac056124012490d9ced8fc1068c020aae88d86a104d3ec8ef76b52b1a</span></span>
-<span><span class="co">#&gt; 5 015a5f561afb733fb07a15675c473af0287e6f3b275bf0fec4c5b693691f30d2</span></span>
-<span><span class="co">#&gt;                                             name</span></span>
-<span><span class="co">#&gt; 1                            19N Strategies S.L.</span></span>
-<span><span class="co">#&gt; 2 3C COMPLIANCE CORPORATE COMPLIANCE CONSULTANTS</span></span>
-<span><span class="co">#&gt; 3                 ABC Arquitectura Modular, S.L.</span></span>
-<span><span class="co">#&gt; 4                       ABECADE MANAGEMENT, S.L.</span></span>
-<span><span class="co">#&gt; 5     ABS CONSULTORIA Y CONTROL DEL GASTO,  S.L.</span></span>
-<span><span class="co">#&gt;                                  name_normalized country</span></span>
-<span><span class="co">#&gt; 1                            19n strategies s.l.      ES</span></span>
-<span><span class="co">#&gt; 2 3c compliance corporate compliance consultants      ES</span></span>
-<span><span class="co">#&gt; 3                 abc arquitectura modular, s.l.      ES</span></span>
-<span><span class="co">#&gt; 4                       abecade management, s.l.      ES</span></span>
-<span><span class="co">#&gt; 5      abs consultoria y control del gasto, s.l.      ES</span></span>
-<span><span class="co">#&gt;                                register</span></span>
-<span><span class="co">#&gt; 1 Spanish CNMC Interest Groups Register</span></span>
-<span><span class="co">#&gt; 2 Spanish CNMC Interest Groups Register</span></span>
-<span><span class="co">#&gt; 3 Spanish CNMC Interest Groups Register</span></span>
-<span><span class="co">#&gt; 4 Spanish CNMC Interest Groups Register</span></span>
-<span><span class="co">#&gt; 5 Spanish CNMC Interest Groups Register</span></span>
-<span><span class="co">#&gt;                                                                             lobby_id</span></span>
-<span><span class="co">#&gt; 1                              https://rgi.cnmc.es/gruposdeinteres/19n-strategies-sl</span></span>
-<span><span class="co">#&gt; 2 https://rgi.cnmc.es/gruposdeinteres/3c-compliance-corporate-compliance-consultants</span></span>
-<span><span class="co">#&gt; 3                    https://rgi.cnmc.es/gruposdeinteres/abc-arquitectura-modular-sl</span></span>
-<span><span class="co">#&gt; 4                          https://rgi.cnmc.es/gruposdeinteres/abecade-management-sl</span></span>
-<span><span class="co">#&gt; 5               https://rgi.cnmc.es/gruposdeinteres/abs-consultoria-control-gasto-sl</span></span></code></pre></div>
-<p>An individual entry can be retrieved by its source-specific
-identifier:</p>
+<code class="sourceCode R"><span><span class="va">italian_registers</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/eulob_registers.html">eulob_registers</a></span><span class="op">(</span>country <span class="op">=</span> <span class="st">"IT"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span></span>
+<span>  <span class="va">italian_registers</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"register"</span>, <span class="st">"n_names"</span>, <span class="st">"n_entities"</span><span class="op">)</span><span class="op">]</span>,</span>
+<span>  caption <span class="op">=</span> <span class="st">"Lobbying registers represented in Italy"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Lobbying registers represented in Italy</caption>
+<thead><tr class="header">
+<th align="left">register</th>
+<th align="right">n_names</th>
+<th align="right">n_entities</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">Camera dei Deputati</td>
+<td align="right">455</td>
+<td align="right">455</td>
+</tr>
+<tr class="even">
+<td align="left">Italian MIMIT Register</td>
+<td align="right">754</td>
+<td align="right">752</td>
+</tr>
+<tr class="odd">
+<td align="left">Tuscany Interest Groups Register</td>
+<td align="right">139</td>
+<td align="right">139</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>n_names</code> column counts distinct normalized-name
+identifiers, whereas <code>n_entities</code> counts distinct
+register-entry identifiers. Neither measure should be interpreted as a
+verified count of unique legal organizations.</p>
+<p>To retrieve the names and identifiers recorded in a particular
+territorial scope, use <code><a href="../reference/eulob_lobbies.html">eulob_lobbies()</a></code>. For example, we can
+inspect the Microsoft entry in the Belgian catalogue:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">spanish</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">0L</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">entry</span> <span class="op">&lt;-</span> <span class="va">spanish</span><span class="op">[</span><span class="fl">1L</span>, <span class="op">]</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/eulob_get.html">eulob_get</a></span><span class="op">(</span></span>
-<span>    country <span class="op">=</span> <span class="va">entry</span><span class="op">$</span><span class="va">country</span>,</span>
-<span>    lobby_id <span class="op">=</span> <span class="va">entry</span><span class="op">$</span><span class="va">lobby_id</span>,</span>
-<span>    register <span class="op">=</span> <span class="va">entry</span><span class="op">$</span><span class="va">register</span></span>
-<span>  <span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span><span class="co">#&gt;                                                            name_id</span></span>
-<span><span class="co">#&gt; 1 0adc32d5cc1bcec043fd3530e8e59cdce829e6e171a5b301e21b644e5ba0ee8b</span></span>
-<span><span class="co">#&gt;                  name     name_normalized country</span></span>
-<span><span class="co">#&gt; 1 19N Strategies S.L. 19n strategies s.l.      ES</span></span>
-<span><span class="co">#&gt;                                register</span></span>
-<span><span class="co">#&gt; 1 Spanish CNMC Interest Groups Register</span></span>
-<span><span class="co">#&gt;                                                lobby_id</span></span>
-<span><span class="co">#&gt; 1 https://rgi.cnmc.es/gruposdeinteres/19n-strategies-sl</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">belgian_entries</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/eulob_lobbies.html">eulob_lobbies</a></span><span class="op">(</span>country <span class="op">=</span> <span class="st">"BE"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">belgian_microsoft</span> <span class="op">&lt;-</span> <span class="va">belgian_entries</span><span class="op">[</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"Microsoft"</span>, <span class="va">belgian_entries</span><span class="op">$</span><span class="va">name</span>, ignore.case <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"name"</span>, <span class="st">"country"</span>, <span class="st">"register"</span><span class="op">)</span>,</span>
+<span>  drop <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">]</span></span>
+<span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span></span>
+<span>  <span class="va">belgian_microsoft</span>,</span>
+<span>  caption <span class="op">=</span> <span class="st">"Microsoft entries recorded in Belgium"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Microsoft entries recorded in Belgium</caption>
+<thead><tr class="header">
+<th align="left"></th>
+<th align="left">name</th>
+<th align="left">country</th>
+<th align="left">register</th>
+</tr></thead>
+<tbody><tr class="odd">
+<td align="left">122</td>
+<td align="left">Microsoft</td>
+<td align="left">BE</td>
+<td align="left">Belgian Chamber Lobby Register</td>
+</tr></tbody>
+</table>
+<p>The related function <code><a href="../reference/eulob_sources.html">eulob_sources()</a></code> can also be used to
+filter the register inventory and select its available columns.</p>
 </div>
 <div class="section level2">
-<h2 id="search-for-organization-names">Search for organization names<a class="anchor" aria-label="anchor" href="#search-for-organization-names"></a>
+<h2 id="search-for-microsoft">Search for Microsoft<a class="anchor" aria-label="anchor" href="#search-for-microsoft"></a>
 </h2>
-<p>The default search uses cosine similarity over character bigrams:</p>
+<p>One of the main features of <code>eulob</code> is the ability to
+search recorded organization names across European lobbying
+registers.</p>
+<p>By default, <code><a href="../reference/eulob_search.html">eulob_search()</a></code> uses cosine similarity over
+character bigrams. This allows a search to retrieve names that are not
+identical to the query.</p>
+<p>We can search for Microsoft using a minimum lexical similarity of
+0.50:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/eulob_search.html">eulob_search</a></span><span class="op">(</span><span class="st">"association"</span>, limit <span class="op">=</span> <span class="fl">5</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                                                            name_id</span></span>
-<span><span class="co">#&gt; 1 0b55697294d8e327c1a8c74cd0f7ca92f13de122ae855ebacbffbeda7ae411d8</span></span>
-<span><span class="co">#&gt; 2 331695501b01339e839bfc135728b55f78ef86e64505e00b009809dcbbc11b55</span></span>
-<span><span class="co">#&gt; 3 331695501b01339e839bfc135728b55f78ef86e64505e00b009809dcbbc11b55</span></span>
-<span><span class="co">#&gt; 4 9d6c5daa7e249c736f5c77aa030384df6f7f61eb28fb3e8a53ed65f8b6d0cf2a</span></span>
-<span><span class="co">#&gt; 5 1ee04df15601d8a5cb9e7f9af2495b6bc8a0164558b5fc1fba138463a7b97461</span></span>
-<span><span class="co">#&gt;                name country                      register         lobby_id</span></span>
-<span><span class="co">#&gt; 1 SCION Association      UE      EU Transparency Register 7144255101975-12</span></span>
-<span><span class="co">#&gt; 2   GSM Association      IE    Irish Register of Lobbying             3893</span></span>
-<span><span class="co">#&gt; 3   GSM Association      LT Lithuanian Lobbyists Register LOB-JA-2026-0040</span></span>
-<span><span class="co">#&gt; 4   KNX ASSOCIATION      UE      EU Transparency Register 0042312101158-89</span></span>
-<span><span class="co">#&gt; 5   PRI Association      DE         German Lobby Register          R004486</span></span>
-<span><span class="co">#&gt;   similarity</span></span>
-<span><span class="co">#&gt; 1  0.8764598</span></span>
-<span><span class="co">#&gt; 2  0.8451543</span></span>
-<span><span class="co">#&gt; 3  0.8451543</span></span>
-<span><span class="co">#&gt; 4  0.8451543</span></span>
-<span><span class="co">#&gt; 5  0.8451543</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/eulob_search.html">eulob_search</a></span><span class="op">(</span><span class="st">"universidad"</span>, country <span class="op">=</span> <span class="st">"ES"</span>, limit <span class="op">=</span> <span class="fl">5</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                                                            name_id</span></span>
-<span><span class="co">#&gt; 1 5598a9945c517a334e25f5e41229406c348b5e532b25984557bfa38bd4c5d82e</span></span>
-<span><span class="co">#&gt; 2 67fe78c152983c9525071e48fd380cfebe3eb32064f86b4c0f352cecacb350fa</span></span>
-<span><span class="co">#&gt; 3 8c0ee1a085a591e0c1b17bc1feba418db99dedf3f27493427958ec49f25f96fd</span></span>
-<span><span class="co">#&gt; 4 a5d691602f0590cff31c2d99a37842bb0610bf509ac7b9694952a264f09962f3</span></span>
-<span><span class="co">#&gt; 5 a79a331276d618cdcc8682a6ef5df43c3cdba62467eeed70da0131cf0f4c5bb5</span></span>
-<span><span class="co">#&gt;                                                                                                  name</span></span>
-<span><span class="co">#&gt; 1                                                                 FUNDACIÓN UNIVERSITARIA SAN ANTONIO</span></span>
-<span><span class="co">#&gt; 2                                                                           Fundación Ciudadana Civio</span></span>
-<span><span class="co">#&gt; 3                   Asociación de Universidades con Titulaciones en Información y Comunicación (ATIC)</span></span>
-<span><span class="co">#&gt; 4                                                                       Energy Ingenieria Aplicada SL</span></span>
-<span><span class="co">#&gt; 5 AGITCV (Asociación de Graduados en Ingeniería en Telecomunicación y TIC de la Comunidad Valenciana)</span></span>
-<span><span class="co">#&gt;   country                              register</span></span>
-<span><span class="co">#&gt; 1      ES Spanish CNMC Interest Groups Register</span></span>
-<span><span class="co">#&gt; 2      ES Spanish CNMC Interest Groups Register</span></span>
-<span><span class="co">#&gt; 3      ES Spanish CNMC Interest Groups Register</span></span>
-<span><span class="co">#&gt; 4      ES Spanish CNMC Interest Groups Register</span></span>
-<span><span class="co">#&gt; 5      ES Spanish CNMC Interest Groups Register</span></span>
-<span><span class="co">#&gt;                                                                                                               lobby_id</span></span>
-<span><span class="co">#&gt; 1                                              https://rgi.cnmc.es/gruposdeinteres/fundacion-universitaria-san-antonio</span></span>
-<span><span class="co">#&gt; 2                                                        https://rgi.cnmc.es/gruposdeinteres/fundacion-ciudadana-civio</span></span>
-<span><span class="co">#&gt; 3              https://rgi.cnmc.es/gruposdeinteres/asociacion-universidades-titulaciones-informacion-comunicacion-atic</span></span>
-<span><span class="co">#&gt; 4                                                    https://rgi.cnmc.es/gruposdeinteres/energy-ingenieria-aplicada-sl</span></span>
-<span><span class="co">#&gt; 5 https://rgi.cnmc.es/gruposdeinteres/agitcv-asociacion-graduados-ingenieria-telecomunicacion-tic-comunidad-valenciana</span></span>
-<span><span class="co">#&gt;   similarity</span></span>
-<span><span class="co">#&gt; 1  0.4879500</span></span>
-<span><span class="co">#&gt; 2  0.3077935</span></span>
-<span><span class="co">#&gt; 3  0.2963189</span></span>
-<span><span class="co">#&gt; 4  0.2711631</span></span>
-<span><span class="co">#&gt; 5  0.2607250</span></span></code></pre></div>
-<p>For case-insensitive literal substring matching, select
+<code class="sourceCode R"><span><span class="va">microsoft</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/eulob_search.html">eulob_search</a></span><span class="op">(</span></span>
+<span>  <span class="st">"Microsoft"</span>,</span>
+<span>  method <span class="op">=</span> <span class="st">"cosine"</span>,</span>
+<span>  min_similarity <span class="op">=</span> <span class="fl">0.50</span>,</span>
+<span>  limit <span class="op">=</span> <span class="fl">15</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span></span>
+<span>  <span class="va">microsoft</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"name"</span>, <span class="st">"country"</span>, <span class="st">"register"</span>, <span class="st">"similarity"</span><span class="op">)</span><span class="op">]</span>,</span>
+<span>  digits <span class="op">=</span> <span class="fl">3</span>,</span>
+<span>  caption <span class="op">=</span> <span class="st">"Names matching Microsoft across European registers"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Names matching Microsoft across European registers</caption>
+<colgroup>
+<col width="39%">
+<col width="9%">
+<col width="37%">
+<col width="13%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">name</th>
+<th align="left">country</th>
+<th align="left">register</th>
+<th align="right">similarity</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">Microsoft</td>
+<td align="left">BE</td>
+<td align="left">Belgian Chamber Lobby Register</td>
+<td align="right">1.000</td>
+</tr>
+<tr class="even">
+<td align="left">Microsoft</td>
+<td align="left">EE</td>
+<td align="left">Estonian Lobby Meetings</td>
+<td align="right">1.000</td>
+</tr>
+<tr class="odd">
+<td align="left">Microsoft Oy</td>
+<td align="left">FI</td>
+<td align="left">Finnish Transparency Register</td>
+<td align="right">0.853</td>
+</tr>
+<tr class="even">
+<td align="left">MICROSOFT FRANCE</td>
+<td align="left">FR</td>
+<td align="left">French HATVP Register</td>
+<td align="right">0.730</td>
+</tr>
+<tr class="odd">
+<td align="left">MICROSOFT S.R.L.</td>
+<td align="left">IT</td>
+<td align="left">Italian MIMIT Register</td>
+<td align="right">0.730</td>
+</tr>
+<tr class="even">
+<td align="left">Microsoft Corporation</td>
+<td align="left">UE</td>
+<td align="left">EU Transparency Register</td>
+<td align="right">0.603</td>
+</tr>
+<tr class="odd">
+<td align="left">Microsoft Deutschland GmbH</td>
+<td align="left">DE</td>
+<td align="left">German Lobby Register</td>
+<td align="right">0.566</td>
+</tr>
+<tr class="even">
+<td align="left">Microsoft Ireland Operations Ltd</td>
+<td align="left">IE</td>
+<td align="left">Irish Register of Lobbying</td>
+<td align="right">0.508</td>
+</tr>
+</tbody>
+</table>
+<p>The results include several recorded variants, such as <em>Microsoft
+Corporation</em>, <em>Microsoft Deutschland GmbH</em>, <em>Microsoft
+France</em>, and <em>Microsoft Oy</em>.</p>
+<p>The <code>similarity</code> column measures lexical resemblance to
+the search term. It does not measure the probability that two records
+represent the same legal organization.</p>
+<p>For a case-insensitive literal substring search, use
 <code>method = "fixed"</code>:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/eulob_search.html">eulob_search</a></span><span class="op">(</span></span>
-<span>  <span class="st">"universidad"</span>,</span>
+<code class="sourceCode R"><span><span class="va">literal</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/eulob_search.html">eulob_search</a></span><span class="op">(</span></span>
+<span>  <span class="st">"Microsoft"</span>,</span>
 <span>  method <span class="op">=</span> <span class="st">"fixed"</span>,</span>
-<span>  limit <span class="op">=</span> <span class="fl">5</span></span>
-<span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                                                            name_id</span></span>
-<span><span class="co">#&gt; 1 8e289c45060039076c027f2863bffe3754c61b739de87d090ac1ff37bb042686</span></span>
-<span><span class="co">#&gt; 2 8c0ee1a085a591e0c1b17bc1feba418db99dedf3f27493427958ec49f25f96fd</span></span>
-<span><span class="co">#&gt; 3 e4285c165934ab6e7338195ec7c9ef94bd7821074835cfcbef5417d2fd046325</span></span>
-<span><span class="co">#&gt; 4 37305b3246e68176be0d88fbd2fe42bb30af59208a4c32d886099b8566747a66</span></span>
-<span><span class="co">#&gt; 5 dd8d39fbefab64f15f58c7b74b5a53f5e4a5ebd5d60dac2d2d59463130858cff</span></span>
-<span><span class="co">#&gt;                                                                                name</span></span>
-<span><span class="co">#&gt; 1                                                AP institute | Universidad Nebrija</span></span>
-<span><span class="co">#&gt; 2 Asociación de Universidades con Titulaciones en Información y Comunicación (ATIC)</span></span>
-<span><span class="co">#&gt; 3                 Conferencia de Rectores y Rectoras de las Universidades Españolas</span></span>
-<span><span class="co">#&gt; 4                                Conselho de Reitores das universidades portuguesas</span></span>
-<span><span class="co">#&gt; 5                                   Faculdade de Ciências da Universidade de Lisboa</span></span>
-<span><span class="co">#&gt;   country                              register</span></span>
-<span><span class="co">#&gt; 1      UE              EU Transparency Register</span></span>
-<span><span class="co">#&gt; 2      ES Spanish CNMC Interest Groups Register</span></span>
-<span><span class="co">#&gt; 3      UE              EU Transparency Register</span></span>
-<span><span class="co">#&gt; 4      UE              EU Transparency Register</span></span>
-<span><span class="co">#&gt; 5      UE              EU Transparency Register</span></span>
-<span><span class="co">#&gt;                                                                                                  lobby_id</span></span>
-<span><span class="co">#&gt; 1                                                                                        8897419105147-11</span></span>
-<span><span class="co">#&gt; 2 https://rgi.cnmc.es/gruposdeinteres/asociacion-universidades-titulaciones-informacion-comunicacion-atic</span></span>
-<span><span class="co">#&gt; 3                                                                                         071771920040-91</span></span>
-<span><span class="co">#&gt; 4                                                                                         688867827027-92</span></span>
-<span><span class="co">#&gt; 5                                                                                         103316717831-58</span></span></code></pre></div>
-<p>Additional approximate name-search methods include Jaccard,
-Jaro-Winkler and Damerau-Levenshtein.</p>
-<p>These methods compare text, not semantic representations or verified
-legal identities.</p>
+<span>  limit <span class="op">=</span> <span class="fl">20</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">literal</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"name"</span>, <span class="st">"country"</span><span class="op">)</span>, drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span>, <span class="fl">5</span><span class="op">)</span>,</span>
+<span>  caption <span class="op">=</span> <span class="st">"Examples of literal Microsoft matches"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Examples of literal Microsoft matches</caption>
+<thead><tr class="header">
+<th align="left">name</th>
+<th align="left">country</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">Microsoft</td>
+<td align="left">BE</td>
+</tr>
+<tr class="even">
+<td align="left">Microsoft</td>
+<td align="left">EE</td>
+</tr>
+<tr class="odd">
+<td align="left">Microsoft Corporation</td>
+<td align="left">UE</td>
+</tr>
+<tr class="even">
+<td align="left">Microsoft Deutschland GmbH</td>
+<td align="left">DE</td>
+</tr>
+<tr class="odd">
+<td align="left">MICROSOFT FRANCE</td>
+<td align="left">FR</td>
+</tr>
+</tbody>
+</table>
+<p>Unlike approximate matching, literal searching returns names
+containing the requested text and does not calculate a similarity
+score.</p>
+<p>Other supported approximate methods include Jaccard, Jaro-Winkler,
+and Damerau-Levenshtein. Their parameters and differences are documented
+in <code><a href="../reference/eulob_search.html">eulob_search()</a></code>.</p>
 </div>
 <div class="section level2">
-<h2 id="search-normalized-name-candidates">Search normalized-name candidates<a class="anchor" aria-label="anchor" href="#search-normalized-name-candidates"></a>
+<h2 id="compare-microsoft-across-registers">Compare Microsoft across registers<a class="anchor" aria-label="anchor" href="#compare-microsoft-across-registers"></a>
 </h2>
-<p><code><a href="../reference/eulob_search_normalized.html">eulob_search_normalized()</a></code> searches a separate bundled
-candidate index.</p>
-<p>It supports three modes:</p>
-<ul>
-<li>
-<code>strict</code>: strict normalized-name candidates.</li>
-<li>
-<code>exploratory</code>: exploratory candidate matching.</li>
-<li>
-<code>both</code>: both candidate categories.</li>
-</ul>
+<p>Searching for similar names is useful for discovering potential
+correspondences, but comparing names across registers requires
+additional care.</p>
+<div class="section level3">
+<h3 id="normalized-name-matching">Normalized-name matching<a class="anchor" aria-label="anchor" href="#normalized-name-matching"></a>
+</h3>
+<p>The function <code><a href="../reference/eulob_search_normalized.html">eulob_search_normalized()</a></code> searches a
+separate index of nominal candidates. Its <code>strict</code> mode
+includes exact normalized-name matches and conservative candidate
+relationships.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/eulob_search_normalized.html">eulob_search_normalized</a></span><span class="op">(</span></span>
-<span>  <span class="st">"association"</span>,</span>
+<code class="sourceCode R"><span><span class="va">normalized</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/eulob_search_normalized.html">eulob_search_normalized</a></span><span class="op">(</span></span>
+<span>  <span class="st">"Microsoft"</span>,</span>
 <span>  method <span class="op">=</span> <span class="st">"strict"</span>,</span>
-<span>  limit <span class="op">=</span> <span class="fl">5</span></span>
-<span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt;  [1] country               register              lobby_id             </span></span>
-<span><span class="co">#&gt;  [4] name                  matched_name          match_type           </span></span>
-<span><span class="co">#&gt;  [7] similarity            evidence              match_level          </span></span>
-<span><span class="co">#&gt; [10] requires_match_review identity_verified     candidate_relevance  </span></span>
-<span><span class="co">#&gt; [13] candidate_relation    candidate_filter     </span></span>
-<span><span class="co">#&gt; &lt;0 rows&gt; (or 0-length row.names)</span></span></code></pre></div>
-<p>Candidate results are intended to assist manual assessment. They are
-not evidence of verified legal identity.</p>
+<span>  limit <span class="op">=</span> <span class="fl">10</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span></span>
+<span>  <span class="va">normalized</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"name"</span>, <span class="st">"country"</span>, <span class="st">"match_type"</span>, <span class="st">"similarity"</span></span>
+<span>  <span class="op">)</span><span class="op">]</span>,</span>
+<span>  digits <span class="op">=</span> <span class="fl">3</span>,</span>
+<span>  caption <span class="op">=</span> <span class="st">"Strict normalized-name matches for Microsoft"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Strict normalized-name matches for Microsoft</caption>
+<thead><tr class="header">
+<th align="left">name</th>
+<th align="left">country</th>
+<th align="left">match_type</th>
+<th align="right">similarity</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">Microsoft</td>
+<td align="left">BE</td>
+<td align="left">normalized_exact</td>
+<td align="right">1</td>
+</tr>
+<tr class="even">
+<td align="left">Microsoft</td>
+<td align="left">EE</td>
+<td align="left">normalized_exact</td>
+<td align="right">1</td>
+</tr>
+</tbody>
+</table>
+<p>In the current catalogue, the exact normalized name
+<em>Microsoft</em> occurs in the Belgian and Estonian registers.</p>
+<p>The function also supports <code>exploratory</code> and
+<code>both</code> modes for broader candidate discovery. These modes
+expose potential matches for further examination rather than
+establishing legal identity.</p>
 </div>
-<div class="section level2">
-<h2 id="find-shared-names-across-registers">Find shared names across registers<a class="anchor" aria-label="anchor" href="#find-shared-names-across-registers"></a>
-</h2>
-<p><code><a href="../reference/eulob_cross_registers.html">eulob_cross_registers()</a></code> identifies names appearing
-across multiple territorial scopes.</p>
+<div class="section level3">
+<h3 id="shared-names-across-territorial-scopes">Shared names across territorial scopes<a class="anchor" aria-label="anchor" href="#shared-names-across-territorial-scopes"></a>
+</h3>
+<p>To find normalized names appearing in more than one territorial
+scope, use <code><a href="../reference/eulob_cross_registers.html">eulob_cross_registers()</a></code>:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/eulob_cross_registers.html">eulob_cross_registers</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="va">shared</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/eulob_cross_registers.html">eulob_cross_registers</a></span><span class="op">(</span></span>
+<span>  name <span class="op">=</span> <span class="st">"Microsoft"</span>,</span>
 <span>  min_countries <span class="op">=</span> <span class="fl">2L</span>,</span>
-<span>  limit <span class="op">=</span> <span class="fl">5L</span></span>
-<span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                                                            name_id</span></span>
-<span><span class="co">#&gt; 1 e2647646f9d6444f4c759e263cabef421fbb961939c41dc2c8a1aa1056974663</span></span>
-<span><span class="co">#&gt; 2 e2647646f9d6444f4c759e263cabef421fbb961939c41dc2c8a1aa1056974663</span></span>
-<span><span class="co">#&gt; 3 e2647646f9d6444f4c759e263cabef421fbb961939c41dc2c8a1aa1056974663</span></span>
-<span><span class="co">#&gt; 4 e2647646f9d6444f4c759e263cabef421fbb961939c41dc2c8a1aa1056974663</span></span>
-<span><span class="co">#&gt; 5 1a187dafc1ca54f2a357cbc02fb65c7eaec6e7eb1b23237d4751f7c2e935fb36</span></span>
-<span><span class="co">#&gt; 6 1a187dafc1ca54f2a357cbc02fb65c7eaec6e7eb1b23237d4751f7c2e935fb36</span></span>
-<span><span class="co">#&gt;                                   name country</span></span>
-<span><span class="co">#&gt; 1                              Blic Oy      FI</span></span>
-<span><span class="co">#&gt; 2                              Blic Oy      GR</span></span>
-<span><span class="co">#&gt; 3                              BLIC OY      PL</span></span>
-<span><span class="co">#&gt; 4                              Blic Oy      UE</span></span>
-<span><span class="co">#&gt; 5 Ontario Teachers' Pension Plan Board      DE</span></span>
-<span><span class="co">#&gt; 6 Ontario Teachers' Pension Plan Board      FI</span></span>
-<span><span class="co">#&gt;                                register        lobby_id n_countries n_entities</span></span>
-<span><span class="co">#&gt; 1         Finnish Transparency Register            2257           4          4</span></span>
-<span><span class="co">#&gt; 2               Greek Lobbying Register              56           4          4</span></span>
-<span><span class="co">#&gt; 3 Polish Professional Lobbying Register           00651           4          4</span></span>
-<span><span class="co">#&gt; 4              EU Transparency Register 687078815005-93           4          4</span></span>
-<span><span class="co">#&gt; 5                 German Lobby Register         R000355           4          4</span></span>
-<span><span class="co">#&gt; 6         Finnish Transparency Register            1496           4          4</span></span></code></pre></div>
-<p>Names appearing in several registers are not necessarily the same
-legal organization.</p>
+<span>  limit <span class="op">=</span> <span class="fl">10L</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span></span>
+<span>  <span class="va">shared</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"name"</span>, <span class="st">"country"</span>, <span class="st">"register"</span>, <span class="st">"n_countries"</span></span>
+<span>  <span class="op">)</span><span class="op">]</span>,</span>
+<span>  caption <span class="op">=</span> <span class="st">"The normalized name Microsoft across registers"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>The normalized name Microsoft across registers</caption>
+<thead><tr class="header">
+<th align="left">name</th>
+<th align="left">country</th>
+<th align="left">register</th>
+<th align="right">n_countries</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">Microsoft</td>
+<td align="left">BE</td>
+<td align="left">Belgian Chamber Lobby Register</td>
+<td align="right">2</td>
+</tr>
+<tr class="even">
+<td align="left">Microsoft</td>
+<td align="left">EE</td>
+<td align="left">Estonian Lobby Meetings</td>
+<td align="right">2</td>
+</tr>
+</tbody>
+</table>
+<p>These results show that the same normalized name occurs in multiple
+register entries. This is useful for comparative research, but it does
+not establish that the records refer to a single legally verified
+entity.</p>
+<p>Notice that <em>Microsoft Corporation</em> and <em>Microsoft
+Deutschland GmbH</em> are separate recorded names. They can appear in a
+broad search for Microsoft without necessarily being grouped together by
+exact normalized-name matching.</p>
+</div>
+<div class="section level3">
+<h3 id="retrieve-an-individual-registration">Retrieve an individual registration<a class="anchor" aria-label="anchor" href="#retrieve-an-individual-registration"></a>
+</h3>
+<p>Once a relevant record has been identified, <code><a href="../reference/eulob_get.html">eulob_get()</a></code>
+retrieves its catalogue entry using the territorial code and
+register-specific identifier.</p>
+<p>For example, we can retrieve the Microsoft Corporation entry recorded
+in the EU Transparency Register:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">eu_entry</span> <span class="op">&lt;-</span> <span class="va">literal</span><span class="op">[</span></span>
+<span>  <span class="va">literal</span><span class="op">$</span><span class="va">country</span> <span class="op">==</span> <span class="st">"UE"</span> <span class="op">&amp;</span></span>
+<span>    <span class="va">literal</span><span class="op">$</span><span class="va">name</span> <span class="op">==</span> <span class="st">"Microsoft Corporation"</span>,</span>
+<span>  ,</span>
+<span>  drop <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">]</span></span>
+<span></span>
+<span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">eu_entry</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">0L</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">record</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/eulob_get.html">eulob_get</a></span><span class="op">(</span></span>
+<span>    country <span class="op">=</span> <span class="va">eu_entry</span><span class="op">$</span><span class="va">country</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>,</span>
+<span>    lobby_id <span class="op">=</span> <span class="va">eu_entry</span><span class="op">$</span><span class="va">lobby_id</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>,</span>
+<span>    register <span class="op">=</span> <span class="va">eu_entry</span><span class="op">$</span><span class="va">register</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span></span>
+<span>  <span class="op">)</span></span>
+<span></span>
+<span>  <span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span></span>
+<span>    <span class="va">record</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"name"</span>, <span class="st">"country"</span>, <span class="st">"register"</span>, <span class="st">"lobby_id"</span><span class="op">)</span><span class="op">]</span>,</span>
+<span>    caption <span class="op">=</span> <span class="st">"Microsoft Corporation in the EU Transparency Register"</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">}</span></span></code></pre></div>
+<table class="table">
+<caption>Microsoft Corporation in the EU Transparency Register</caption>
+<colgroup>
+<col width="31%">
+<col width="11%">
+<col width="36%">
+<col width="20%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">name</th>
+<th align="left">country</th>
+<th align="left">register</th>
+<th align="left">lobby_id</th>
+</tr></thead>
+<tbody><tr class="odd">
+<td align="left">Microsoft Corporation</td>
+<td align="left">UE</td>
+<td align="left">EU Transparency Register</td>
+<td align="left">0801162959-21</td>
+</tr></tbody>
+</table>
+<p>The <code>lobby_id</code> identifies a record within its source
+register. Depending on the register, it may be an official identifier, a
+source-derived identifier, or a URL.</p>
+</div>
 </div>
 <div class="section level2">
-<h2 id="understand-identifiers">Understand identifiers<a class="anchor" aria-label="anchor" href="#understand-identifiers"></a>
+<h2 id="interpretation-and-reproducibility">Interpretation and reproducibility<a class="anchor" aria-label="anchor" href="#interpretation-and-reproducibility"></a>
 </h2>
-<p>The catalogue distinguishes:</p>
+<p>The catalogue provides a structured way to search and compare
+registered names, but its identifiers represent different concepts:</p>
 <ul>
 <li>
-<code>name_id</code>: identifier for a normalized name.</li>
+<code>name</code> is the name recorded in the source.</li>
 <li>
-<code>name_normalized</code>: normalized name representation.</li>
+<code>name_normalized</code> is the normalized textual
+representation.</li>
 <li>
-<code>name</code>: recorded name.</li>
+<code>name_id</code> identifies a normalized name within the
+catalogue.</li>
 <li>
-<code>country</code>: territorial or supranational scope.</li>
+<code>country</code> identifies the territorial or supranational
+scope.</li>
 <li>
-<code>register</code>: source register.</li>
+<code>register</code> identifies the source register.</li>
 <li>
-<code>lobby_id</code>: register-specific identifier.</li>
+<code>lobby_id</code> identifies a record within that register.</li>
 </ul>
-<p>Some register identifiers originate from official registration
-systems; others are derived from source records.</p>
-<p>Identifiers should always be interpreted within their corresponding
-register.</p>
-</div>
-<div class="section level2">
-<h2 id="reproducibility">Reproducibility<a class="anchor" aria-label="anchor" href="#reproducibility"></a>
-</h2>
-<p>The bundled catalogue can be queried without an internet connection.
-Record the package version, search methods and filters used in any
-analysis.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/eulob_info.html">eulob_info</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; $project</span></span>
-<span><span class="co">#&gt; [1] "EU-LOB"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $full_name</span></span>
-<span><span class="co">#&gt; [1] "An Open and Incremental Database of Registered Lobbying Organizations in the European Union"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $package</span></span>
-<span><span class="co">#&gt; [1] "eulob"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $version</span></span>
-<span><span class="co">#&gt; [1] "0.2.1.9000"</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $repository</span></span>
-<span><span class="co">#&gt; [1] NA</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $data_version</span></span>
-<span><span class="co">#&gt; [1] NA</span></span>
-<span><span class="fu"><a href="../reference/eulob_version.html">eulob_version</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] '0.2.1.9000'</span></span></code></pre></div>
-<p>For details on the indexing structure and methodological limitations,
-see <em>Understanding the EU-LOB Catalogue</em>.</p>
+<p><strong>Matching names do not automatically establish legal-entity
+equivalence.</strong> Two records may have similar names without
+referring to the same legal organization, and different names may be
+associated with related organizations.</p>
+<p>For reproducible research, report the installed package version,
+search method, similarity threshold, filters, and territorial coverage
+used in the analysis.</p>
+<p>The installed version can be obtained with
+<code><a href="../reference/eulob_version.html">eulob_version()</a></code>, while <code><a href="../reference/eulob_info.html">eulob_info()</a></code> provides
+additional package information.</p>
+<p>For a more detailed explanation of the catalogue, its indexing
+structure, and methodological limitations, consult <a href="https://eulob.lobbyresearch.org/articles/data-structure.html">Understanding
+the EU-LOB Catalogue</a>.</p>
+<p>For complete function arguments and return values, see the package’s
+<strong>Reference</strong> section.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
